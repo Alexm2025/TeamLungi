@@ -555,16 +555,56 @@ h3 {
   gap: 1rem;
 }
 
+/* each box is a link filling its grid cell, so all four stay the same height */
+.steps li {
+  display: flex;
+}
+
 .step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.25rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.step:hover {
+  border-color: var(--primary);
+  box-shadow: 0 6px 18px rgba(15, 118, 110, 0.12);
+  transform: translateY(-2px);
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .step p {
   margin: 0;
   color: var(--muted);
+}
+
+.step-cta {
+  margin-top: auto;
+  padding-top: 0.9rem;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    transition: none;
+  }
+
+  .step:hover {
+    transform: none;
+  }
 }
 
 .step-num {
