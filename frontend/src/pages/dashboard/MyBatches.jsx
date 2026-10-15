@@ -116,7 +116,7 @@ export default function MyBatches({ account, version, canSend, onSend, onChange 
       {state.eventsFailed && (
         <Alert type="info" className="mb">
           Couldn't search the full blockchain history, so this list shows batches this browser
-          has seen. Use “Find a batch” to open any other batch.
+          has seen. Use the Verify page to open any other batch.
         </Alert>
       )}
       {state.error && <Alert type="error">{state.error}</Alert>}
