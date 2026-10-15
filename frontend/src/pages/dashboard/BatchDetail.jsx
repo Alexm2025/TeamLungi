@@ -6,6 +6,7 @@ import { CONTRACT_READY } from "./chain";
 import { fetchBatch, fetchParticipants, rememberBatch } from "./data";
 import { friendlyError } from "./errors";
 import { addressUrl, formatDate, formatDateTime, sameAddress, shortAddress } from "./format";
+import RecallCard from "./RecallCard.jsx";
 import TransferCard from "./TransferCard.jsx";
 import { useWallet } from "./WalletContext";
 
@@ -95,6 +96,10 @@ export default function BatchDetail() {
   const { batch, handovers, people } = state;
   const expired = batch.expiryDate < Date.now() / 1000;
   const actions = availableActions(batch, account, participant);
+  // Same rule as the contract: the regulator, or the batch's own manufacturer
+  const mayRecall =
+    batch.status !== 4 &&
+    ((participant.active && participant.role === 4) || sameAddress(batch.manufacturer, account));
 
   return (
     <div className="dashboard">
@@ -180,6 +185,7 @@ export default function BatchDetail() {
         {actions.length > 0 && (
           <TransferCard batchId={batch.batchId} lockId actions={actions} onDone={reload} />
         )}
+        {mayRecall && <RecallCard batchId={batch.batchId} lockId onDone={reload} />}
       </div>
     </div>
   );

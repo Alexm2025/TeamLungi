@@ -5,6 +5,8 @@ import { CONTRACT_READY, ROLE } from "./chain";
 import CreateBatch from "./CreateBatch.jsx";
 import MyBatches from "./MyBatches.jsx";
 import ParticipantLookup from "./ParticipantLookup.jsx";
+import RecallCard from "./RecallCard.jsx";
+import RecallList from "./RecallList.jsx";
 import RegisterParticipant from "./RegisterParticipant.jsx";
 import TransferCard from "./TransferCard.jsx";
 import { useWallet } from "./WalletContext";
@@ -121,10 +123,13 @@ export default function Dashboard() {
             />
           </div>
         )}
+        {isRegulator && <RecallCard onDone={changed} />}
         {isAdmin && <RegisterParticipant />}
         {(isAdmin || isRegulator) && <ParticipantLookup canDeactivate={isAdmin} />}
         <BatchLookup />
       </div>
+
+      {isRegulator && <RecallList version={version} onRefresh={changed} />}
     </div>
   );
 }

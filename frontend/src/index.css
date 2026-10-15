@@ -768,3 +768,8 @@ code {
     margin-bottom: 0.5rem;
   }
 }
+
+/* recall card: red top edge marks it as a destructive action */
+.card-danger {
+  border-top: 3px solid var(--danger);
+}
