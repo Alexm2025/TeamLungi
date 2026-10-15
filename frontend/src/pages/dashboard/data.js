@@ -1,7 +1,7 @@
 // Read helpers for the dashboard: turn contract structs into plain objects and
 // work out which batches belong to an account.
 import { ZeroAddress, ZeroHash, id as hashText } from "ethers";
-import { CONTRACT_ADDRESS, getContract, getProvider } from "./chain";
+import { CONTRACT_ADDRESS, DEPLOY_BLOCK, getContract, getProvider } from "./chain";
 import { sameAddress } from "./format";
 
 // ---------- converting contract results ----------
@@ -83,10 +83,9 @@ export function rememberBatch(batchId) {
 
 // ---------- finding "my" batches through events ----------
 
-// Amoy makes a block about every 2 s, so 150k blocks ≈ 3.5 days: the whole hackathon.
-// Set VITE_DEPLOY_BLOCK in frontend/.env to start exactly at the deployment instead.
+// Search starts at the deploy block (VITE_DEPLOY_BLOCK, via Member A's lib). If that isn't
+// set, look back 150k blocks: Amoy makes one about every 2 s, so ≈ 3.5 days, the whole hackathon.
 const LOOKBACK_BLOCKS = 150_000;
-const DEPLOY_BLOCK = Number(import.meta.env.VITE_DEPLOY_BLOCK || 0);
 const CHUNK = 10_000; // many public RPCs refuse log searches wider than this
 const PARALLEL = 5; // chunks fetched at once, to stay under rate limits
 
