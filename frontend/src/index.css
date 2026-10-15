@@ -546,26 +546,6 @@ h3 {
   font-size: 1.1rem;
 }
 
-.hero-verify {
-  display: flex;
-  gap: 0.5rem;
-  max-width: 460px;
-  margin: 0 auto 1rem;
-}
-
-.hero-verify input {
-  flex: 1;
-  min-width: 0;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font: inherit;
-}
-
-.hero-link {
-  font-weight: 500;
-}
-
 .steps {
   list-style: none;
   padding: 0;
@@ -637,24 +617,11 @@ code {
   margin: 0.25rem 0 0;
 }
 
-.title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-}
-
 .dash-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   gap: 1.25rem;
   align-items: start;
-}
-
-.back-link {
-  align-self: flex-start;
-  font-weight: 500;
-  text-decoration: none;
 }
 
 .form-row {
@@ -708,54 +675,6 @@ code {
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-.person {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-
-.person a {
-  font-size: 0.85rem;
-}
-
-.timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.timeline-item {
-  position: relative;
-  display: flex;
-  gap: 0.75rem;
-  padding-bottom: 1rem;
-}
-
-/* vertical line joining the dots */
-.timeline-item:not(:last-child)::before {
-  content: "";
-  position: absolute;
-  left: 0.35rem;
-  top: 1rem;
-  bottom: 0;
-  width: 2px;
-  background: var(--border);
-}
-
-.timeline-dot {
-  flex: none;
-  width: 0.75rem;
-  height: 0.75rem;
-  margin-top: 0.3rem;
-  border-radius: 50%;
-  background: var(--primary);
-}
-
-.timeline-item p {
-  margin: 0.2rem 0 0;
 }
 
 @media (max-width: 520px) {

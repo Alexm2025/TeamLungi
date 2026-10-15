@@ -11,7 +11,6 @@ export function sameAddress(a, b) {
 }
 
 export const txUrl = (hash) => `${EXPLORER}/tx/${hash}`;
-export const addressUrl = (address) => `${EXPLORER}/address/${address}`;
 
 // "2026-10-15" from a date picker -> unix seconds at midnight UTC (what the contract stores)
 export function dateInputToUnix(value) {

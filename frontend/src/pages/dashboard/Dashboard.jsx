@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from "react";
 import { Alert, Button, Card, Spinner } from "../../components/ui";
-import BatchLookup from "./BatchLookup.jsx";
 import { DEMO_MODE, ROLE } from "./chain";
 import CreateBatch from "./CreateBatch.jsx";
 import { DEMO_ACCOUNTS } from "./demo";
@@ -96,10 +95,10 @@ function DashboardPanels({ account, participant, isAdmin }) {
             />
           </div>
         )}
-        {isRegulator && <RecallCard onDone={changed} />}
+        {/* The contract lets the regulator recall any batch and a manufacturer its own */}
+        {(isRegulator || (active && role === 1)) && <RecallCard onDone={changed} />}
         {isAdmin && <RegisterParticipant />}
         {(isAdmin || isRegulator) && <ParticipantLookup canDeactivate={isAdmin} />}
-        <BatchLookup />
       </div>
 
       {isRegulator && <RecallList version={version} onRefresh={changed} />}
