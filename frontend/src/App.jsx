@@ -1,5 +1,5 @@
 import { Link, Route, Routes, useParams } from "react-router-dom";
-import Navbar from "./components/ui/Navbar.jsx";
+import { Navbar, ToastProvider } from "./components/ui";
 import Dashboard from "./pages/dashboard/Dashboard.jsx";
 import Home from "./pages/dashboard/Home.jsx";
 import MockRoleSwitcher from "./pages/dashboard/MockRoleSwitcher.jsx";
@@ -37,20 +37,22 @@ const NAV_LINKS = [
 
 export default function App() {
   return (
-    <WalletProvider>
-      <Navbar links={NAV_LINKS}>
-        <MockRoleSwitcher />
-        <WalletButton />
-      </Navbar>
-      <main className="container">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/verify" element={<VerifyPage />} />
-          <Route path="/verify/:batchId" element={<VerifyPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-    </WalletProvider>
+    <ToastProvider>
+      <WalletProvider>
+        <Navbar links={NAV_LINKS}>
+          <MockRoleSwitcher />
+          <WalletButton />
+        </Navbar>
+        <main className="container">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/verify" element={<VerifyPage />} />
+            <Route path="/verify/:batchId" element={<VerifyPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </WalletProvider>
+    </ToastProvider>
   );
 }

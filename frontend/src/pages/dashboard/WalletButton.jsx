@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui";
 import { ROLE } from "./chain";
 import { shortAddress } from "./format";
 import { useWallet } from "./WalletContext";
@@ -14,9 +15,9 @@ export default function WalletButton() {
   if (!account) {
     return (
       <div className="wallet">
-        <button className="btn btn-primary" onClick={connect} disabled={connecting}>
+        <Button onClick={connect} loading={connecting}>
           {connecting ? "Connecting…" : "Connect wallet"}
-        </button>
+        </Button>
         {error && <span className="wallet-error">{error}</span>}
       </div>
     );

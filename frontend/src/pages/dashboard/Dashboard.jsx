@@ -1,3 +1,4 @@
+import { Button, Spinner } from "../../components/ui";
 import { ROLE } from "./chain";
 import { useWallet } from "./WalletContext";
 
@@ -10,14 +11,14 @@ export default function Dashboard() {
       <section className="panel center">
         <h1>Connect your wallet</h1>
         <p className="muted">Your dashboard depends on the role registered for your address.</p>
-        <button className="btn btn-primary" onClick={connect} disabled={connecting}>
+        <Button onClick={connect} loading={connecting}>
           {connecting ? "Connecting…" : "Connect wallet"}
-        </button>
+        </Button>
       </section>
     );
   }
 
-  if (loadingRole) return <p className="muted">Loading your role…</p>;
+  if (loadingRole) return <Spinner label="Loading your role…" />;
 
   return (
     <section className="panel">
