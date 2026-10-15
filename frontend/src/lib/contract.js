@@ -10,6 +10,10 @@ export const CONTRACT_ADDRESS =
 
 export const ABI = MedChainABI;
 
+// Block the contract was deployed in (printed by the deploy script). Event history is read from here,
+// so the activity feed doesn't scan the whole chain.
+export const DEPLOY_BLOCK = Number(import.meta.env.VITE_DEPLOY_BLOCK || 0);
+
 // Polygon Amoy testnet
 export const CHAIN_ID = 80002;
 export const RPC_URL = import.meta.env.VITE_RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com";
