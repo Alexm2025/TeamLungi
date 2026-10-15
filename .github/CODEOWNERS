@@ -1,0 +1,9 @@
+# Each folder has one owner so branches never touch the same files.
+/contracts/                    @Alexm2025
+/frontend/                     @shreashetty17
+/frontend/src/pages/verify/    @ErwinSamuel2906
+/frontend/src/components/qr/   @ErwinSamuel2906
+/frontend/src/lib/             @Alexm2025
+/backend/                      @ErwinSamuel2906
+/docs/                         @ErwinSamuel2906
+/README.md                     @ErwinSamuel2906
