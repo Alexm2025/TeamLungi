@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { getAddress } from "ethers";
-import { getContract, getSigner } from "./chain";
+import { CONTRACT_READY, getContract, getSigner } from "./chain";
+import { toParticipant } from "./data";
 import { friendlyError } from "./errors";
 
 const WalletContext = createContext(null);
@@ -22,19 +23,14 @@ export function WalletProvider({ children }) {
 
   const loadRole = useCallback(async (address) => {
     latest.current = address;
+    if (!CONTRACT_READY) return; // nothing to read yet; the dashboard explains why
     setLoadingRole(true);
     setError("");
     try {
       const c = await getContract();
       const [p, admin] = await Promise.all([c.participants(address), c.admin()]);
       if (latest.current !== address) return;
-      // participants() returns a struct; ethers lets us read it by field name or by index
-      setParticipant({
-        role: Number(p.role ?? p[0]),
-        name: p.name ?? p[1],
-        location: p.location ?? p[2],
-        active: Boolean(p.active ?? p[3]),
-      });
+      setParticipant(toParticipant(p));
       setIsAdmin(admin.toLowerCase() === address.toLowerCase());
     } catch (err) {
       if (latest.current !== address) return;
