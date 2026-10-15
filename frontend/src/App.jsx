@@ -6,6 +6,7 @@ import Home from "./pages/dashboard/Home.jsx";
 import WalletButton from "./pages/dashboard/WalletButton.jsx";
 import { WalletProvider } from "./pages/dashboard/WalletContext.jsx";
 import Assistant from "./components/assistant/Assistant.jsx";
+import { AlertBar, NotificationBell, NotificationsProvider } from "./components/notifications/Notifications.jsx";
 import LedgerPage from "./pages/ledger/LedgerPage.jsx";
 import VerifyPage from "./pages/verify/VerifyPage.jsx";
 
@@ -55,10 +56,13 @@ export default function App() {
   return (
     <ToastProvider>
       <WalletProvider>
+        <NotificationsProvider>
         <Navbar links={NAV_LINKS}>
+          <NotificationBell />
           <WalletButton />
         </Navbar>
         <NetworkBanner />
+        <AlertBar />
         <main className="container">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -71,6 +75,7 @@ export default function App() {
           </Routes>
         </main>
         <Assistant />
+        </NotificationsProvider>
       </WalletProvider>
     </ToastProvider>
   );
