@@ -1,0 +1,2 @@
+# Local Hardhat node deployments reset on every restart; only testnet deployments are shared.
+deployments/localhost.json
