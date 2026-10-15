@@ -9,8 +9,9 @@ export default function QRCodeLabel({ batchId, drugName, size = 192 }) {
   if (!batchId) return null;
 
   // The QR holds a full link, so any phone camera opens the verify page directly
-  // without needing our app installed.
-  const url = `${window.location.origin}/verify/${encodeURIComponent(batchId)}`;
+  // without needing our app installed. BASE_URL is "/" locally and "/TeamLungi/"
+  // on GitHub Pages, so the link works in both places.
+  const url = `${window.location.origin}${import.meta.env.BASE_URL}verify/${encodeURIComponent(batchId)}`;
 
   const getPng = () => wrapRef.current.querySelector("canvas").toDataURL("image/png");
 

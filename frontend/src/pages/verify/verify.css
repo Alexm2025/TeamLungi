@@ -10,6 +10,14 @@
   margin-top: -8px;
 }
 
+.verify-demo {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 14px;
+}
+
 .verify-search {
   display: flex;
   gap: 8px;

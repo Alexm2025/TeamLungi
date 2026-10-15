@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { keccak256, toUtf8Bytes, ZeroAddress } from "ethers";
-import { getContract } from "./contractSource";
+import { ROLE, STATUS } from "../../lib/contract";
+import { getContract, USING_MOCK } from "./contractSource";
 import QRScanner from "../../components/qr/QRScanner";
 import "./verify.css";
-
-const STATUS_LABELS = ["Created", "In transit", "At distributor", "At pharmacy", "Recalled"];
-const ROLE_LABELS = ["Unknown", "Manufacturer", "Distributor", "Pharmacy", "Regulator"];
 
 const VERDICTS = {
   genuine: { title: "GENUINE", text: "This batch is registered on-chain and safe to sell." },
@@ -40,7 +38,7 @@ async function loadBatch(batchId) {
   await Promise.all(
     addresses.map(async (addr) => {
       const [role, name, location] = await contract.participants(addr);
-      people[addr] = { role: ROLE_LABELS[Number(role)], name: name || shortAddr(addr), location };
+      people[addr] = { role: ROLE[Number(role)], name: name || shortAddr(addr), location };
     })
   );
 
@@ -57,7 +55,7 @@ async function loadBatch(batchId) {
       mfgDate: batch.mfgDate,
       expiryDate: batch.expiryDate,
       quantity: Number(batch.quantity),
-      status: STATUS_LABELS[Number(batch.status)],
+      status: STATUS[Number(batch.status)],
     },
     timeline: history.map((h) => ({
       created: h.from === ZeroAddress,
@@ -108,6 +106,11 @@ export default function VerifyPage() {
     <main className="verify">
       <h1>Verify a medicine batch</h1>
       <p className="verify-sub">Enter the batch ID printed on the pack, or scan its QR code.</p>
+      {USING_MOCK && (
+        <p className="verify-demo">
+          Demo mode: contract not deployed yet. Try PCM-2026-001, AMX-2026-014 or IBU-2024-007.
+        </p>
+      )}
 
       <form className="verify-search" onSubmit={onSubmit}>
         <input

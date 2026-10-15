@@ -1,7 +1,5 @@
-// TEMPORARY stand-in for frontend/src/lib/contract.js (owned by Member A).
-// It mimics the read-only contract so the verify page can be built before the
-// real contract lands on main. Delete this file once contractSource.js points
-// at the real lib.
+// Demo stand-in for the deployed MedChain contract (read calls only).
+// contractSource.js uses it only while no contract address is configured.
 import { keccak256, toUtf8Bytes } from "ethers";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -28,7 +26,7 @@ function batch(id, drugName, mfgDaysAgo, expiryDaysFromNow, quantity, owner, sta
     mfgDate: BigInt(now - mfgDaysAgo * DAY),
     expiryDate: BigInt(now + expiryDaysFromNow * DAY),
     quantity: BigInt(quantity),
-    docHash: "",
+    docHash: "0x" + "0".repeat(64),
     currentOwner: owner,
     pendingReceiver: ZERO,
     status: BigInt(status),
