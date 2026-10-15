@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ZeroHash, keccak256 } from "ethers";
 import { Button, Card, Input } from "../../components/ui";
+import { hashFile, NO_DOCUMENT } from "../../lib/document";
 import { rememberBatch } from "./data";
 import { dateInputToUnix } from "./format";
 import { useTx } from "./useTx";
@@ -62,9 +62,10 @@ export default function CreateBatch({ onCreated }) {
     if (!validate()) return;
     const batchId = form.batchId.trim();
 
-    // Only the certificate's fingerprint goes on-chain: anyone holding the file can
-    // hash it again and compare, but the file itself stays private.
-    const docHash = file ? keccak256(new Uint8Array(await file.arrayBuffer())) : ZeroHash;
+    // Only the certificate's fingerprint (SHA-256) goes on-chain: anyone holding the file can
+    // hash it again on the verify page and compare, but the file itself stays private.
+    // Uses Member A's hashFile() so the verify page computes exactly the same fingerprint.
+    const docHash = file ? await hashFile(file) : NO_DOCUMENT;
 
     const receipt = await run(`Create batch ${batchId}`, (c) =>
       c.createBatch(
