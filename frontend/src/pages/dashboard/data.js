@@ -115,34 +115,41 @@ async function recentEvents() {
   return logs.map((log) => c.interface.parseLog(log)).filter(Boolean);
 }
 
-async function findBatchIds(account) {
-  const ids = new Set(knownBatchIds());
+// IDs of batches this account appears in as maker, sender or receiver.
+async function batchIdsFromEvents(account) {
+  const ids = new Set();
+  for (const { name, args } of await recentEvents()) {
+    const involved =
+      (name === "BatchCreated" && sameAddress(args.manufacturer, account)) ||
+      ((name === "TransferInitiated" || name === "TransferAccepted") &&
+        (sameAddress(args.from, account) || sameAddress(args.to, account)));
+    if (involved) ids.add(args.batchId);
+  }
+  return ids;
+}
+
+// Batches this account made, holds, is about to receive, or has passed on; newest first.
+export async function loadMyBatches(account) {
+  let fromEvents = new Set();
   let eventsFailed = false;
   try {
-    for (const { name, args } of await recentEvents()) {
-      const mine =
-        (name === "BatchCreated" && sameAddress(args.manufacturer, account)) ||
-        ((name === "TransferInitiated" || name === "TransferAccepted") &&
-          (sameAddress(args.from, account) || sameAddress(args.to, account)));
-      if (mine) ids.add(args.batchId);
-    }
+    fromEvents = await batchIdsFromEvents(account);
   } catch (err) {
     console.warn("Event search failed; showing batches remembered in this browser.", err);
     eventsFailed = true;
   }
-  return { ids: [...ids], eventsFailed };
-}
 
-// Batches this account made, holds now, or is about to receive, newest first.
-export async function loadMyBatches(account) {
-  const { ids, eventsFailed } = await findBatchIds(account);
   const c = await getContract();
+  const ids = [...new Set([...fromEvents, ...knownBatchIds()])];
   const results = await Promise.allSettled(ids.map((batchId) => c.getBatch(batchId)));
   const batches = results
     .filter((r) => r.status === "fulfilled")
     .map((r) => toBatch(r.value))
+    // Remembered IDs can include batches this browser only looked at, so those
+    // are kept only if this account is part of them right now.
     .filter(
       (b) =>
+        fromEvents.has(b.batchId) ||
         sameAddress(b.manufacturer, account) ||
         sameAddress(b.currentOwner, account) ||
         sameAddress(b.pendingReceiver, account)

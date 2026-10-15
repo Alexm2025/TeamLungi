@@ -13,10 +13,10 @@ function relation(batch, account) {
     return { label: "Sent, waiting for receiver", order: 1 };
   }
   if (sameAddress(batch.currentOwner, account)) return { label: "In your custody", order: 2 };
-  return { label: "Made by you, passed on", order: 3 };
+  return { label: "Passed on", order: 3 };
 }
 
-// Every batch this account made, holds or is about to receive, with quick actions.
+// Every batch this account made, holds, is about to receive or has passed on, with quick actions.
 export default function MyBatches({ account, version, canSend, onSend, onChange }) {
   const [state, setState] = useState({ loading: true, batches: [], eventsFailed: false, error: "" });
   const [rowBusy, setRowBusy] = useState(null);
@@ -106,7 +106,7 @@ export default function MyBatches({ account, version, canSend, onSend, onChange 
   return (
     <Card
       title="My batches"
-      subtitle="Batches you made, hold, or are about to receive."
+      subtitle="Batches you made, hold, are about to receive, or have passed on."
       actions={
         <Button size="sm" variant="ghost" onClick={onChange} disabled={state.loading}>
           Refresh
