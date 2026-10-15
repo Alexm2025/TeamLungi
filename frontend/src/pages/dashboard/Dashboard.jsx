@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Alert, Button, Card, Spinner } from "../../components/ui";
 import ApprovalQueue from "../../components/ledger/ApprovalQueue.jsx";
 import { CONTRACT_READY, NETWORK, ROLE } from "./chain";
@@ -110,58 +110,21 @@ function DashboardPanels({ account, participant, isAdmin }) {
   );
 }
 
-// Roles a home-page box can ask for (?role=manufacturer). The wallet's on-chain role always wins.
-const ROLE_CHOICES = {
-  manufacturer: { label: "Manufacturer", role: 1 },
-  distributor: { label: "Distributor", role: 2 },
-  pharmacy: { label: "Pharmacy", role: 3 },
-  regulator: { label: "Regulator", role: 4 },
-};
-
-// The role picked on the home page (?role=manufacturer), if it's one we know.
-function useRequestedRole() {
-  const [params, setParams] = useSearchParams();
-  const requested = params.get("role");
-  const valid = requested && Object.hasOwn(ROLE_CHOICES, requested) ? requested : null;
-  const setRequested = (key) => setParams({ role: key }, { replace: true });
-  return [valid, setRequested];
-}
-
-// Real dashboard: the role comes from the connected wallet.
+// Real dashboard: you get here after signing in with a role on the home page.
 function LiveDashboard() {
-  const { account, participant, isAdmin, loadingRole, connecting, connect } = useWallet();
-  const [requested] = useRequestedRole();
+  const { signedIn, account, participant, isAdmin, loadingRole } = useWallet();
 
-  if (!account) {
+  if (!signedIn) {
     return (
       <section className="panel center">
-        <h1>Connect your wallet</h1>
-        <p className="muted">Your dashboard depends on the role registered for your address.</p>
-        <Button onClick={connect} loading={connecting}>
-          {connecting ? "Connecting…" : "Connect wallet"}
-        </Button>
+        <h1>Sign in to continue</h1>
+        <p className="muted">Choose your role and connect MetaMask on the home page to open your dashboard.</p>
+        <Link to="/" className="btn btn-primary">Go to sign in</Link>
       </section>
     );
   }
   if (loadingRole) return <Spinner label="Loading your role…" />;
-
-  // A home-page box can't change a wallet's role (the blockchain decides it), so if the
-  // two differ, say which dashboard this wallet actually gets.
-  const requestedRole = requested && ROLE_CHOICES[requested].role;
-  const mismatch = participant.active && requestedRole && requestedRole !== participant.role;
-
-  return (
-    <>
-      {mismatch && (
-        <Alert type="info" className="mb">
-          You chose {ROLE_CHOICES[requested].label}, but this wallet is registered as{" "}
-          {ROLE[participant.role]}, so this is the {ROLE[participant.role]} dashboard. Switch
-          accounts in MetaMask to use another role.
-        </Alert>
-      )}
-      <DashboardPanels account={account} participant={participant} isAdmin={isAdmin} />
-    </>
-  );
+  return <DashboardPanels account={account} participant={participant} isAdmin={isAdmin} />;
 }
 
 // Shown only if the site was built without a contract address.

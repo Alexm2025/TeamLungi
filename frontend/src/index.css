@@ -799,3 +799,16 @@ code {
 .admin-h { font-size: 1rem; margin: 16px 0 4px; }
 .admin-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 8px; }
 .admin-row .field { flex: 1; min-width: 220px; margin: 0; }
+
+/* Top-bar log out */
+.logout-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.logout-btn:hover { border-color: var(--danger); color: var(--danger); }

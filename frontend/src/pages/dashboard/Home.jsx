@@ -4,45 +4,53 @@ import { Badge } from "../../components/ui";
 import HashLink from "../../components/ledger/HashLink.jsx";
 import { EVENT_TONE, timeAgo } from "../../components/ledger/format";
 import { getActivity, subscribeActivity } from "../../lib/activity";
-import { CONTRACT_ADDRESS, isContractConfigured, NETWORK, addressUrl } from "../../lib/contract";
+import { CONTRACT_ADDRESS, NETWORK, ROLE, addressUrl, isContractConfigured } from "../../lib/contract";
 import { getChainOverview } from "../../lib/ledger";
+import { shortAddress } from "./format";
+import { ROLE_OPTIONS, useWallet } from "./WalletContext";
 import "./home.css";
 
-// The supply chain, and who signs each hand-off. Roles come from the connected wallet, so these
-// are an explanation, not links.
-const CHAIN = [
-  { who: "Manufacturer", note: "Creates the batch + lab-report fingerprint" },
-  { who: "Distributor", note: "Receives and moves it on" },
-  { who: "Pharmacy", note: "Final stop before the patient" },
-];
-const SIGNATURES = [
-  ["1", "Sender initiates"],
-  ["2", "Receiver confirms receipt"],
-  ["3", "Regulator approves"],
-];
-const TRUST = [
-  ["Tamper-evident", "Records live on a public blockchain; nobody, including us, can edit or delete them."],
-  ["Signed by real wallets", "Every action is signed with a company's MetaMask key; the network checks the signature."],
-  ["Verifiable by anyone", "Customers check a batch from its QR code with no wallet, no login, no app."],
-  ["Recalls in seconds", "The regulator recalls a batch on-chain and every verify page shows it instantly."],
-];
+// Thin line icons (24px grid), drawn to match the interface rather than decorate it.
+const ICONS = {
+  manufacturer: (
+    <path d="M3 21V10l5 3V10l5 3V7l8 4v10H3Zm4-4h2m4 0h2m-6-3h2m4 0h2" />
+  ),
+  distributor: (
+    <path d="M2 7h11v9H2zM13 10h4l4 3v3h-8M6.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm11 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+  ),
+  pharmacy: <path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" />,
+  regulator: <path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Zm-3.5 9 2.5 2.5 4.5-5" />,
+};
 
-function VerifyBox() {
+const ROLE_COPY = {
+  manufacturer: "Register batches and start each hand-off",
+  distributor: "Confirm receipt and move stock onward",
+  pharmacy: "Receive and dispense verified stock",
+  regulator: "Approve hand-offs and issue recalls",
+};
+
+const Icon = ({ name }) => (
+  <svg className="hx-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {ICONS[name]}
+  </svg>
+);
+
+function VerifyForm() {
   const navigate = useNavigate();
   const [id, setId] = useState("");
-  const go = (e) => {
+  const submit = (e) => {
     e.preventDefault();
     if (id.trim()) navigate(`/verify/${encodeURIComponent(id.trim())}`);
   };
   return (
-    <form className="home-verify" onSubmit={go}>
-      <input value={id} onChange={(e) => setId(e.target.value)} placeholder="Enter a batch ID, e.g. PCM-2026-001" aria-label="Batch ID" />
-      <button type="submit" disabled={!id.trim()}>Verify</button>
+    <form className="hx-verify" onSubmit={submit}>
+      <input value={id} onChange={(e) => setId(e.target.value)} placeholder="Batch ID, e.g. PCM-2026-001" aria-label="Batch ID" />
+      <button type="submit" disabled={!id.trim()}>Verify batch</button>
     </form>
   );
 }
 
-function LiveStats() {
+function HeroStats() {
   const [info, setInfo] = useState(null);
   useEffect(() => {
     if (!isContractConfigured()) return;
@@ -51,54 +59,114 @@ function LiveStats() {
     const t = setInterval(load, 15000);
     return () => clearInterval(t);
   }, []);
-  const url = addressUrl(CONTRACT_ADDRESS);
   const stats = [
-    ["Batches tracked", info?.totalBatches],
-    ["On-chain transactions", info?.totalTransactions],
-    ["Latest block", info ? `#${info.latestBlock.toLocaleString()}` : null],
-    ["Network", NETWORK.name.replace(" Testnet", "")],
+    [info?.totalBatches, "Batches on-chain"],
+    [info?.totalTransactions, "Signed transactions"],
+    [info ? `#${info.latestBlock.toLocaleString()}` : null, "Latest block"],
   ];
   return (
-    <section className="home-stats" aria-label="Live blockchain stats">
-      {stats.map(([label, value]) => (
+    <dl className="hx-stats">
+      {stats.map(([v, label]) => (
         <div key={label}>
-          <strong>{value ?? "…"}</strong>
-          <span>{label}</span>
+          <dt>{label}</dt>
+          <dd>{v ?? "—"}</dd>
         </div>
       ))}
-      {url && (
-        <a className="home-contract" href={url} target="_blank" rel="noreferrer">
-          View the smart contract on the block explorer ↗
-        </a>
-      )}
-    </section>
+    </dl>
   );
 }
 
-function RecentActivity() {
+// Choose a role, then connect MetaMask. Once signed in, only that role is shown until log-out.
+function SignInPanel() {
+  const navigate = useNavigate();
+  const { signedIn, sessionRole, account, participant, isAdmin, connecting, error, signIn, signOut } = useWallet();
+  const [selected, setSelected] = useState(null);
+  const hasWallet = typeof window !== "undefined" && Boolean(window.ethereum);
+
+  if (signedIn) {
+    const label = ROLE_OPTIONS[sessionRole]?.label ?? ROLE[participant.role];
+    return (
+      <div className="hx-panel">
+        <p className="hx-eyebrow">Signed in</p>
+        <div className="hx-session">
+          <span className="hx-session-icon"><Icon name={sessionRole} /></span>
+          <div>
+            <strong>{label}{isAdmin ? " · Admin" : ""}</strong>
+            <span>{participant.name || "Registered participant"}{participant.location ? ` · ${participant.location}` : ""}</span>
+            <code>{shortAddress(account)}</code>
+          </div>
+        </div>
+        <Link to="/dashboard" className="hx-primary">Open {label.toLowerCase()} dashboard</Link>
+        <button type="button" className="hx-secondary" onClick={signOut}>Log out and disconnect</button>
+        <p className="hx-note">
+          Other roles are hidden while you're signed in. To use a different role, log out, then
+          sign in again with that role's MetaMask account.
+        </p>
+      </div>
+    );
+  }
+
+  const go = async () => {
+    if (await signIn(selected)) navigate("/dashboard");
+  };
+
+  return (
+    <div className="hx-panel">
+      <p className="hx-eyebrow">Participant sign-in</p>
+      <h2>Select your role</h2>
+      <div className="hx-roles" role="radiogroup" aria-label="Role">
+        {Object.entries(ROLE_OPTIONS).map(([key, opt]) => (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={selected === key}
+            className={`hx-role${selected === key ? " is-selected" : ""}`}
+            onClick={() => setSelected(key)}
+          >
+            <Icon name={key} />
+            <strong>{opt.label}</strong>
+            <span>{ROLE_COPY[key]}</span>
+          </button>
+        ))}
+      </div>
+      <button type="button" className="hx-primary" disabled={!selected || connecting || !hasWallet} onClick={go}>
+        {connecting ? "Waiting for MetaMask…" : selected ? `Connect MetaMask as ${ROLE_OPTIONS[selected].label}` : "Connect MetaMask"}
+      </button>
+      {!hasWallet && <p className="hx-error">MetaMask isn't installed in this browser.</p>}
+      {error && <p className="hx-error">{error}</p>}
+      <p className="hx-note">Your wallet must be registered for the selected role by the network administrator. The contract checks it on sign-in.</p>
+    </div>
+  );
+}
+
+function Activity() {
   const [items, setItems] = useState(null);
   useEffect(() => {
     if (!isContractConfigured()) return;
-    getActivity({ limit: 6 }).then(setItems).catch(() => setItems([]));
-    return subscribeActivity((item) => setItems((list) => [item, ...(list ?? [])].slice(0, 6)));
+    getActivity({ limit: 7 }).then(setItems).catch(() => setItems([]));
+    return subscribeActivity((item) => setItems((list) => [item, ...(list ?? [])].slice(0, 7)));
   }, []);
   return (
-    <section className="home-card">
-      <div className="home-card-head">
-        <h2>Latest on-chain activity</h2>
-        <Link to="/ledger">Full public ledger →</Link>
-      </div>
+    <section className="hx-card">
+      <header className="hx-card-head">
+        <div>
+          <p className="hx-eyebrow dark">Live ledger</p>
+          <h2>Latest on-chain activity</h2>
+        </div>
+        <Link to="/ledger">Open public ledger</Link>
+      </header>
       {items === null ? (
         <p className="muted">Reading the blockchain…</p>
       ) : items.length === 0 ? (
         <p className="muted">No activity yet.</p>
       ) : (
-        <ul className="home-activity">
+        <ul className="hx-activity">
           {items.map((i) => (
             <li key={`${i.txHash}-${i.logIndex}`}>
               <Badge tone={EVENT_TONE[i.type]}>{i.label}</Badge>
-              <span className="home-activity-subject">{i.batchId ?? i.name ?? ""}</span>
-              <span className="muted">{timeAgo(i.timestamp)}</span>
+              <span className="hx-subject">{i.batchId ?? i.name ?? ""}</span>
+              <span className="hx-time">{timeAgo(i.timestamp)}</span>
               <HashLink kind="tx" value={i.txHash} />
             </li>
           ))}
@@ -108,60 +176,82 @@ function RecentActivity() {
   );
 }
 
+const FLOW = [
+  ["Manufacturer", "Creates the batch and its lab-report fingerprint"],
+  ["Distributor", "Receives, stores and moves the batch onward"],
+  ["Pharmacy", "Final custodian before the patient"],
+];
+
+const ASSURANCE = [
+  ["Immutable record", "Entries are written to a public blockchain. No one, including the operators, can alter or delete them."],
+  ["Cryptographic identity", "Each action is signed by the participant's MetaMask key and verified by the network."],
+  ["Enforced by contract", "Roles, permitted routes, approvals and recalls are rules in the smart contract, not settings in an app."],
+  ["Open verification", "Anyone can verify a batch from its QR code: no account, no wallet, no fee."],
+];
+
 export default function Home() {
+  const contractUrl = addressUrl(CONTRACT_ADDRESS);
   return (
-    <div className="home">
-      <section className="hero">
-        <h1>Know where your medicine has been.</h1>
-        <p>
-          MediChain records every hand-off of a medicine batch on the blockchain, from
-          manufacturer to pharmacy, so a fake batch has no history to show.
-        </p>
-        <VerifyBox />
-        <div className="home-ctas">
-          <Link to="/ledger" className="btn btn-secondary">Explore the public ledger</Link>
-          <Link to="/dashboard" className="btn btn-primary">Company dashboard (MetaMask)</Link>
+    <div className="hx">
+      <section className="hx-hero">
+        <div className="hx-hero-main">
+          <p className="hx-eyebrow">Pharmaceutical supply-chain integrity</p>
+          <h1>
+            Every batch. Every hand-off.
+            <br />
+            <span>Provable.</span>
+          </h1>
+          <p className="hx-lead">
+            MediChain records the custody of medicine batches on {NETWORK.name.replace(" Testnet", "")}, from
+            manufacturer to pharmacy. Each transfer is countersigned by three parties and can be verified by anyone.
+          </p>
+          <VerifyForm />
+          <HeroStats />
+          {contractUrl && (
+            <a className="hx-contract" href={contractUrl} target="_blank" rel="noreferrer">
+              Smart contract {shortAddress(CONTRACT_ADDRESS)} on block explorer ↗
+            </a>
+          )}
         </div>
+        <SignInPanel />
       </section>
 
-      <LiveStats />
-
-      <section className="home-card">
-        <h2>How a batch travels</h2>
-        <ol className="home-chain">
-          {CHAIN.map((c, i) => (
-            <li key={c.who}>
-              <div className="home-node">
-                <strong>{c.who}</strong>
-                <span>{c.note}</span>
+      <section className="hx-card">
+        <p className="hx-eyebrow dark">Custody protocol</p>
+        <h2>Three signatures on every hand-off</h2>
+        <ol className="hx-flow">
+          {FLOW.map(([who, what], i) => (
+            <li key={who}>
+              <div className="hx-node">
+                <span className="hx-node-idx">0{i + 1}</span>
+                <strong>{who}</strong>
+                <span>{what}</span>
               </div>
-              {i < CHAIN.length - 1 && (
-                <div className="home-hop" aria-label="hand-off">
-                  {SIGNATURES.map(([n, label]) => (
-                    <span key={n} className="sig" title={label}>✍ {n}</span>
-                  ))}
+              {i < FLOW.length - 1 && (
+                <div className="hx-link" aria-hidden="true">
+                  <span>Sender</span>
+                  <span>Receiver</span>
+                  <span>Regulator</span>
                 </div>
               )}
             </li>
           ))}
         </ol>
-        <ul className="home-sigs">
-          {SIGNATURES.map(([n, label]) => (
-            <li key={n}><span className="sig">✍ {n}</span> {label}</li>
-          ))}
-          <li className="muted">Custody moves only after all three signatures.</li>
-        </ul>
+        <p className="muted hx-flow-note">
+          Custody changes only after the sender initiates, the receiver confirms receipt and the regulator approves.
+        </p>
       </section>
 
-      <div className="home-grid">
-        <RecentActivity />
-        <section className="home-card">
-          <h2>Why you can trust it</h2>
-          <ul className="home-trust">
-            {TRUST.map(([title, text]) => (
+      <div className="hx-grid">
+        <Activity />
+        <section className="hx-card">
+          <p className="hx-eyebrow dark">Assurance</p>
+          <h2>Why the record can be trusted</h2>
+          <ul className="hx-assure">
+            {ASSURANCE.map(([title, text]) => (
               <li key={title}>
                 <strong>{title}</strong>
-                <span className="muted">{text}</span>
+                <span>{text}</span>
               </li>
             ))}
           </ul>

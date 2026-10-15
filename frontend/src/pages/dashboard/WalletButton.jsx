@@ -1,35 +1,28 @@
-import { Button } from "../../components/ui";
+import { useNavigate } from "react-router-dom";
 import { ROLE } from "./chain";
 import { shortAddress } from "./format";
 import { useWallet } from "./WalletContext";
 
-function roleLabel({ role, active }, isAdmin) {
-  if (!role) return isAdmin ? "Admin" : "Not registered";
-  const label = active ? ROLE[role] : `${ROLE[role]} (deactivated)`;
-  return isAdmin ? `Admin · ${label}` : label;
-}
-
+// Top-right account status. Signing in happens only on the home page, so this shows nothing
+// until a role session is active; then it shows the role, the wallet and a log-out button.
 export default function WalletButton() {
-  const { account, participant, isAdmin, connecting, loadingRole, error, connect } = useWallet();
+  const { signedIn, account, participant, isAdmin, loadingRole, signOut } = useWallet();
+  const navigate = useNavigate();
+  if (!signedIn) return null;
 
-  if (!account) {
-    return (
-      <div className="wallet">
-        <Button onClick={connect} loading={connecting}>
-          {connecting ? "Connecting…" : "Connect wallet"}
-        </Button>
-        {error && <span className="wallet-error">{error}</span>}
-      </div>
-    );
-  }
+  const role = loadingRole ? "…" : ROLE[participant.role] ?? "Unknown";
+  const logOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
-    <div className="wallet" title={error || account}>
-      <span className={`role-pill role-${participant.role}`}>
-        {loadingRole ? "Loading role…" : roleLabel(participant, isAdmin)}
-      </span>
+    <div className="wallet" title={account}>
+      <span className={`role-pill role-${participant.role}`}>{isAdmin ? `Admin · ${role}` : role}</span>
       <span className="wallet-address">{shortAddress(account)}</span>
-      {error && <span className="wallet-error">{error}</span>}
+      <button type="button" className="logout-btn" onClick={logOut}>
+        Log out
+      </button>
     </div>
   );
 }
