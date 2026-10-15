@@ -41,7 +41,7 @@ export const isContractConfigured = () => !/^0x0{40}$/.test(CONTRACT_ADDRESS);
 
 // Number -> label maps matching the Solidity enums (index = enum value).
 export const ROLE = ["None", "Manufacturer", "Distributor", "Pharmacy", "Regulator"];
-export const STATUS = ["Created", "In Transit", "At Distributor", "At Pharmacy", "Recalled"];
+export const STATUS = ["Created", "In Transit", "At Distributor", "At Pharmacy", "Recalled", "Awaiting Approval"];
 
 let readProvider;
 

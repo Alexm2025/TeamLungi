@@ -6,15 +6,17 @@ pragma solidity ^0.8.20;
  *
  * Key ideas:
  *  - Only registered participants (with a role) can act.
- *  - Custody changes need BOTH sides: sender initiates, receiver accepts.
- *  - Every handover is stored, so anyone can see the full chain of custody.
+ *  - Custody changes need THREE signatures: sender initiates, receiver accepts,
+ *    regulator approves. Only the third signature moves custody.
+ *  - Every handover is stored with who approved it, so anyone can see the full chain of custody.
  *  - Regulator (or the batch's manufacturer) can recall a batch.
  *  - verifyBatch() is a free read call used by the public QR-scan page.
  */
 contract MedChain {
     // ───────────────────────── Types ─────────────────────────
     enum Role { None, Manufacturer, Distributor, Pharmacy, Regulator }
-    enum Status { Created, InTransit, AtDistributor, AtPharmacy, Recalled }
+    // New values are appended so existing numbers (used by the frontend) don't change.
+    enum Status { Created, InTransit, AtDistributor, AtPharmacy, Recalled, AwaitingApproval }
 
     struct Participant {
         Role role;
@@ -36,6 +38,7 @@ contract MedChain {
         Status status;
         uint256 createdAt;
         bool exists;
+        bool receiverAccepted; // step 2 of the pending handover is done
     }
 
     struct Handover {
@@ -43,6 +46,7 @@ contract MedChain {
         address to;
         uint256 timestamp;
         string location;
+        address approvedBy;    // regulator who signed step 3 (zero for the creation entry)
     }
 
     // ───────────────────────── Storage ─────────────────────────
@@ -59,6 +63,8 @@ contract MedChain {
     event BatchCreated(string batchId, string drugName, address indexed manufacturer);
     event TransferInitiated(string batchId, address indexed from, address indexed to);
     event TransferAccepted(string batchId, address indexed from, address indexed to);
+    event TransferApproved(string batchId, address indexed from, address indexed to, address indexed regulator);
+    event TransferRejected(string batchId, address indexed by, string reason);
     event TransferCancelled(string batchId, address indexed by);
     event BatchRecalled(string batchId, string reason, address indexed by);
 
@@ -128,15 +134,16 @@ contract MedChain {
             pendingReceiver: address(0),
             status: Status.Created,
             createdAt: block.timestamp,
-            exists: true
+            exists: true,
+            receiverAccepted: false
         });
         allBatchKeys.push(k);
 
-        history[k].push(Handover(address(0), msg.sender, block.timestamp, participants[msg.sender].location));
+        history[k].push(Handover(address(0), msg.sender, block.timestamp, participants[msg.sender].location, address(0)));
         emit BatchCreated(batchId, drugName, msg.sender);
     }
 
-    /// Step 1 of handover: current owner proposes a receiver.
+    /// Step 1 of 3: current owner proposes a receiver.
     function initiateTransfer(string calldata batchId, address to) external batchExists(batchId) {
         bytes32 k = _key(batchId);
         Batch storage b = batches[k];
@@ -153,33 +160,64 @@ contract MedChain {
         emit TransferInitiated(batchId, msg.sender, to);
     }
 
-    /// Step 2 of handover: receiver confirms they physically got the batch.
+    /// Step 2 of 3: receiver confirms they physically got the batch. Custody does not move yet.
     function acceptTransfer(string calldata batchId) external batchExists(batchId) {
-        bytes32 k = _key(batchId);
-        Batch storage b = batches[k];
+        Batch storage b = batches[_key(batchId)];
 
         require(b.status != Status.Recalled, "Batch recalled");
         require(b.pendingReceiver == msg.sender, "Not the pending receiver");
         require(participants[msg.sender].active, "Receiver inactive");
+        require(!b.receiverAccepted, "Already accepted");
 
-        address from = b.currentOwner;
-        b.currentOwner = msg.sender;
-        b.pendingReceiver = address(0);
-        b.status = participants[msg.sender].role == Role.Pharmacy ? Status.AtPharmacy : Status.AtDistributor;
-
-        history[k].push(Handover(from, msg.sender, block.timestamp, participants[msg.sender].location));
-        emit TransferAccepted(batchId, from, msg.sender);
+        b.receiverAccepted = true;
+        b.status = Status.AwaitingApproval;
+        emit TransferAccepted(batchId, b.currentOwner, msg.sender);
     }
 
-    /// Sender can cancel a pending transfer (e.g. wrong receiver chosen).
-    function cancelTransfer(string calldata batchId) external batchExists(batchId) {
+    /// Step 3 of 3: regulator countersigns the handover. Only now does custody move.
+    function approveTransfer(string calldata batchId) external onlyRole(Role.Regulator) batchExists(batchId) {
         bytes32 k = _key(batchId);
         Batch storage b = batches[k];
+
+        require(b.status != Status.Recalled, "Batch recalled");
+        require(b.pendingReceiver != address(0), "Nothing pending");
+        require(b.receiverAccepted, "Receiver has not accepted");
+        // Either party may have been deactivated since steps 1-2.
+        require(participants[b.pendingReceiver].active, "Receiver inactive");
+        require(participants[b.currentOwner].active, "Sender inactive");
+
+        address from = b.currentOwner;
+        address to = b.pendingReceiver;
+        b.currentOwner = to;
+        b.pendingReceiver = address(0);
+        b.receiverAccepted = false;
+        b.status = _restingStatus(to);
+
+        history[k].push(Handover(from, to, block.timestamp, participants[to].location, msg.sender));
+        emit TransferApproved(batchId, from, to, msg.sender);
+    }
+
+    /// Regulator can refuse a pending handover (e.g. paperwork mismatch); the batch stays with the sender.
+    function rejectTransfer(string calldata batchId, string calldata reason)
+        external
+        onlyRole(Role.Regulator)
+        batchExists(batchId)
+    {
+        Batch storage b = batches[_key(batchId)];
+        require(b.pendingReceiver != address(0), "Nothing pending");
+        require(bytes(reason).length > 0, "Reason required");
+
+        _clearPending(b);
+        emit TransferRejected(batchId, msg.sender, reason);
+    }
+
+    /// Sender can cancel a pending transfer (e.g. wrong receiver chosen) until the regulator approves it.
+    function cancelTransfer(string calldata batchId) external batchExists(batchId) {
+        Batch storage b = batches[_key(batchId)];
         require(b.currentOwner == msg.sender, "Not current owner");
         require(b.pendingReceiver != address(0), "Nothing pending");
 
-        b.pendingReceiver = address(0);
-        b.status = participants[msg.sender].role == Role.Manufacturer ? Status.Created : Status.AtDistributor;
+        _clearPending(b);
         emit TransferCancelled(batchId, msg.sender);
     }
 
@@ -193,6 +231,7 @@ contract MedChain {
 
         b.status = Status.Recalled;
         b.pendingReceiver = address(0);
+        b.receiverAccepted = false;
         recallReason[k] = reason;
         emit BatchRecalled(batchId, reason, msg.sender);
     }
@@ -240,5 +279,19 @@ contract MedChain {
         if (from == Role.Manufacturer && to == Role.Distributor) return true;
         if (from == Role.Distributor && (to == Role.Distributor || to == Role.Pharmacy)) return true;
         return false;
+    }
+
+    /// Status of a batch sitting (not moving) with `holder`.
+    function _restingStatus(address holder) internal view returns (Status) {
+        Role r = participants[holder].role;
+        if (r == Role.Manufacturer) return Status.Created;
+        if (r == Role.Pharmacy) return Status.AtPharmacy;
+        return Status.AtDistributor;
+    }
+
+    function _clearPending(Batch storage b) internal {
+        b.pendingReceiver = address(0);
+        b.receiverAccepted = false;
+        b.status = _restingStatus(b.currentOwner);
     }
 }

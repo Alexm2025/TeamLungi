@@ -4,7 +4,7 @@ const { loadFixture, time } = require("@nomicfoundation/hardhat-toolbox/network-
 
 // Mirror the enums in MedChain.sol
 const Role = { None: 0, Manufacturer: 1, Distributor: 2, Pharmacy: 3, Regulator: 4 };
-const Status = { Created: 0, InTransit: 1, AtDistributor: 2, AtPharmacy: 3, Recalled: 4 };
+const Status = { Created: 0, InTransit: 1, AtDistributor: 2, AtPharmacy: 3, Recalled: 4, AwaitingApproval: 5 };
 
 const DAY = 24 * 60 * 60;
 const BATCH_ID = "BATCH-001";
@@ -31,6 +31,13 @@ describe("MedChain", function () {
       .connect(ctx.manufacturer)
       .createBatch(BATCH_ID, "Paracetamol 500mg", now, expiry, 1000, ethers.id("lab-report-v1"));
     return { ...ctx, expiry };
+  }
+
+  // Full 3-signature handover: sender initiates, receiver accepts, regulator (admin) approves.
+  async function handover(medChain, admin, from, to, batchId = BATCH_ID) {
+    await medChain.connect(from).initiateTransfer(batchId, to.address);
+    await medChain.connect(to).acceptTransfer(batchId);
+    await medChain.connect(admin).approveTransfer(batchId);
   }
 
   describe("Participants", function () {
@@ -131,26 +138,36 @@ describe("MedChain", function () {
   });
 
   describe("Transfers", function () {
-    it("initiateTransfer + acceptTransfer moves custody and adds history", async function () {
-      const { medChain, manufacturer, distributor } = await loadFixture(withBatchFixture);
+    it("moves custody only after all 3 signatures: initiate, accept, regulator approve", async function () {
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
 
+      // Step 1: sender initiates
       await expect(medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address))
         .to.emit(medChain, "TransferInitiated")
         .withArgs(BATCH_ID, manufacturer.address, distributor.address);
-
-      // Two-step handover: owner doesn't change until the receiver accepts.
       let b = await medChain.getBatch(BATCH_ID);
       expect(b.status).to.equal(Status.InTransit);
       expect(b.currentOwner).to.equal(manufacturer.address);
       expect(b.pendingReceiver).to.equal(distributor.address);
 
+      // Step 2: receiver accepts, but custody still hasn't moved
       await expect(medChain.connect(distributor).acceptTransfer(BATCH_ID))
         .to.emit(medChain, "TransferAccepted")
         .withArgs(BATCH_ID, manufacturer.address, distributor.address);
+      b = await medChain.getBatch(BATCH_ID);
+      expect(b.status).to.equal(Status.AwaitingApproval);
+      expect(b.receiverAccepted).to.be.true;
+      expect(b.currentOwner).to.equal(manufacturer.address);
+      expect((await medChain.getHistory(BATCH_ID)).length).to.equal(1);
 
+      // Step 3: regulator approves, and custody moves
+      await expect(medChain.connect(admin).approveTransfer(BATCH_ID))
+        .to.emit(medChain, "TransferApproved")
+        .withArgs(BATCH_ID, manufacturer.address, distributor.address, admin.address);
       b = await medChain.getBatch(BATCH_ID);
       expect(b.currentOwner).to.equal(distributor.address);
       expect(b.pendingReceiver).to.equal(ethers.ZeroAddress);
+      expect(b.receiverAccepted).to.be.false;
       expect(b.status).to.equal(Status.AtDistributor);
 
       const history = await medChain.getHistory(BATCH_ID);
@@ -158,15 +175,79 @@ describe("MedChain", function () {
       expect(history[1].from).to.equal(manufacturer.address);
       expect(history[1].to).to.equal(distributor.address);
       expect(history[1].location).to.equal("Pune");
+      expect(history[1].approvedBy).to.equal(admin.address);
+      expect(history[0].approvedBy).to.equal(ethers.ZeroAddress); // creation entry
+    });
+
+    it("rejects approval by anyone who isn't the regulator", async function () {
+      const { medChain, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
+
+      // Neither party to the handover can sign the third step themselves.
+      await expect(medChain.connect(distributor).approveTransfer(BATCH_ID)).to.be.revertedWith("Wrong role");
+      await expect(medChain.connect(manufacturer).approveTransfer(BATCH_ID)).to.be.revertedWith("Wrong role");
+    });
+
+    it("rejects approval before the receiver has accepted, or with nothing pending", async function () {
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
+
+      await expect(medChain.connect(admin).approveTransfer(BATCH_ID)).to.be.revertedWith("Nothing pending");
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+      await expect(medChain.connect(admin).approveTransfer(BATCH_ID)).to.be.revertedWith(
+        "Receiver has not accepted"
+      );
+    });
+
+    it("rejects a second accept for the same pending transfer", async function () {
+      const { medChain, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
+
+      await expect(medChain.connect(distributor).acceptTransfer(BATCH_ID)).to.be.revertedWith("Already accepted");
+    });
+
+    it("lets the regulator reject a handover, leaving the batch with the sender", async function () {
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
+
+      await expect(medChain.connect(admin).rejectTransfer(BATCH_ID, ""), "empty reason").to.be.revertedWith(
+        "Reason required"
+      );
+      await expect(medChain.connect(admin).rejectTransfer(BATCH_ID, "Invoice mismatch"))
+        .to.emit(medChain, "TransferRejected")
+        .withArgs(BATCH_ID, admin.address, "Invoice mismatch");
+
+      const b = await medChain.getBatch(BATCH_ID);
+      expect(b.currentOwner).to.equal(manufacturer.address);
+      expect(b.pendingReceiver).to.equal(ethers.ZeroAddress);
+      expect(b.receiverAccepted).to.be.false;
+      expect(b.status).to.equal(Status.Created);
+      expect((await medChain.getHistory(BATCH_ID)).length).to.equal(1);
+    });
+
+    it("rejects rejectTransfer from non-regulators", async function () {
+      const { medChain, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+
+      await expect(medChain.connect(distributor).rejectTransfer(BATCH_ID, "no")).to.be.revertedWith("Wrong role");
+    });
+
+    it("blocks approval if the receiver was deactivated after accepting", async function () {
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
+      await medChain.connect(admin).deactivateParticipant(distributor.address);
+
+      await expect(medChain.connect(admin).approveTransfer(BATCH_ID)).to.be.revertedWith("Receiver inactive");
     });
 
     it("completes the full manufacturer -> distributor -> pharmacy chain", async function () {
-      const { medChain, manufacturer, distributor, pharmacy } = await loadFixture(withBatchFixture);
+      const { medChain, admin, manufacturer, distributor, pharmacy } = await loadFixture(withBatchFixture);
 
-      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
-      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
-      await medChain.connect(distributor).initiateTransfer(BATCH_ID, pharmacy.address);
-      await medChain.connect(pharmacy).acceptTransfer(BATCH_ID);
+      await handover(medChain, admin, manufacturer, distributor);
+      await handover(medChain, admin, distributor, pharmacy);
 
       const b = await medChain.getBatch(BATCH_ID);
       expect(b.currentOwner).to.equal(pharmacy.address);
@@ -233,6 +314,18 @@ describe("MedChain", function () {
       );
     });
 
+    it("lets the owner cancel even after the receiver accepted, until the regulator approves", async function () {
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
+      await medChain.connect(manufacturer).cancelTransfer(BATCH_ID);
+
+      const b = await medChain.getBatch(BATCH_ID);
+      expect(b.receiverAccepted).to.be.false;
+      expect(b.status).to.equal(Status.Created);
+      await expect(medChain.connect(admin).approveTransfer(BATCH_ID)).to.be.revertedWith("Nothing pending");
+    });
+
     it("rejects acceptTransfer from a receiver deactivated after the transfer started", async function () {
       const { medChain, manufacturer, distributor } = await loadFixture(withBatchFixture);
 
@@ -279,6 +372,16 @@ describe("MedChain", function () {
       await expect(medChain.connect(admin).recallBatch(BATCH_ID, "again")).to.be.revertedWith("Already recalled");
     });
 
+    it("blocks regulator approval of a handover that was accepted before the recall", async function () {
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
+      await medChain.connect(admin).recallBatch(BATCH_ID, "Contamination");
+
+      await expect(medChain.connect(admin).approveTransfer(BATCH_ID)).to.be.revertedWith("Batch recalled");
+      expect((await medChain.getBatch(BATCH_ID)).currentOwner).to.equal(manufacturer.address);
+    });
+
     it("rejects recall by anyone other than the regulator or the batch's manufacturer", async function () {
       const { medChain, distributor } = await loadFixture(withBatchFixture);
 
@@ -301,9 +404,8 @@ describe("MedChain", function () {
     });
 
     it("returns correct flags, names and hop count for a genuine batch", async function () {
-      const { medChain, manufacturer, distributor } = await loadFixture(withBatchFixture);
-      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
-      await medChain.connect(distributor).acceptTransfer(BATCH_ID);
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await handover(medChain, admin, manufacturer, distributor);
 
       const v = await medChain.verifyBatch(BATCH_ID);
       expect(v.exists).to.be.true;

@@ -68,25 +68,33 @@ async function seedLocalBatches(medChain, [admin, manufacturer, distributor, pha
     (await asM.createBatch(id, drug, now, now + 365 * DAY, qty, ethers.id(`lab-report-${id}`))).wait();
   const send = async (from, id, to) => (await from.initiateTransfer(id, to.address)).wait();
   const accept = async (as, id) => (await as.acceptTransfer(id)).wait();
+  const approve = async (id) => (await medChain.connect(admin).approveTransfer(id)).wait();
+  // All 3 signatures: sender, receiver, regulator
+  const handover = async (from, id, to, asTo) => {
+    await send(from, id, to);
+    await accept(asTo, id);
+    await approve(id);
+  };
 
   await create("PCM-2026-001", "Paracetamol 500mg", 5000); // full chain -> pharmacy
-  await send(asM, "PCM-2026-001", distributor);
-  await accept(asD, "PCM-2026-001");
-  await send(asD, "PCM-2026-001", pharmacy);
-  await accept(asP, "PCM-2026-001");
+  await handover(asM, "PCM-2026-001", distributor, asD);
+  await handover(asD, "PCM-2026-001", pharmacy, asP);
 
   await create("AMX-2026-014", "Amoxicillin 250mg", 2000); // at distributor
-  await send(asM, "AMX-2026-014", distributor);
-  await accept(asD, "AMX-2026-014");
+  await handover(asM, "AMX-2026-014", distributor, asD);
 
-  await create("IBU-2026-007", "Ibuprofen 400mg", 3000); // in transit
+  await create("IBU-2026-007", "Ibuprofen 400mg", 3000); // step 1 done: in transit
   await send(asM, "IBU-2026-007", distributor);
+
+  await create("MET-2026-021", "Metformin 500mg", 4000); // steps 1-2 done: awaiting regulator
+  await send(asM, "MET-2026-021", distributor);
+  await accept(asD, "MET-2026-021");
 
   await create("CTZ-2026-003", "Cetirizine 10mg", 1500); // recalled by regulator
   await (await medChain.connect(admin).recallBatch("CTZ-2026-003", "Failed dissolution test")).wait();
 
   console.log("+ Created demo batches: PCM-2026-001 (at pharmacy), AMX-2026-014 (at distributor),");
-  console.log("  IBU-2026-007 (in transit), CTZ-2026-003 (recalled)");
+  console.log("  IBU-2026-007 (in transit), MET-2026-021 (awaiting regulator approval), CTZ-2026-003 (recalled)");
 }
 
 main().catch((err) => {

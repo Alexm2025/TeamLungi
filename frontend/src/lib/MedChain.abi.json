@@ -129,6 +129,37 @@
       {
         "indexed": true,
         "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "regulator",
+        "type": "address"
+      }
+    ],
+    "name": "TransferApproved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "batchId",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "by",
         "type": "address"
       }
@@ -162,6 +193,31 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "batchId",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "TransferRejected",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "string",
@@ -185,6 +241,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "batchId",
+        "type": "string"
+      }
+    ],
+    "name": "approveTransfer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -322,6 +391,11 @@
             "internalType": "bool",
             "name": "exists",
             "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "receiverAccepted",
+            "type": "bool"
           }
         ],
         "internalType": "struct MedChain.Batch",
@@ -363,6 +437,11 @@
             "internalType": "string",
             "name": "location",
             "type": "string"
+          },
+          {
+            "internalType": "address",
+            "name": "approvedBy",
+            "type": "address"
           }
         ],
         "internalType": "struct MedChain.Handover[]",
@@ -486,6 +565,24 @@
       }
     ],
     "name": "registerParticipant",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "batchId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "rejectTransfer",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
