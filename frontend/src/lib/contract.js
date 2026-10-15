@@ -1,0 +1,68 @@
+// Single entry point the frontend uses to talk to the MedChain contract.
+// Pages import from here instead of creating providers/contracts themselves.
+import { BrowserProvider, Contract, JsonRpcProvider } from "ethers";
+import MedChainABI from "./MedChain.abi.json";
+
+// Set after deploying (`npm run deploy:amoy` in contracts/ prints it).
+// A VITE_CONTRACT_ADDRESS in frontend/.env overrides it, e.g. for a local Hardhat node.
+export const CONTRACT_ADDRESS =
+  import.meta.env.VITE_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
+
+export const ABI = MedChainABI;
+
+// Polygon Amoy testnet
+export const CHAIN_ID = 80002;
+export const RPC_URL = import.meta.env.VITE_RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com";
+const AMOY_PARAMS = {
+  chainId: "0x13882", // 80002 in hex
+  chainName: "Polygon Amoy Testnet",
+  nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+  rpcUrls: [RPC_URL],
+  blockExplorerUrls: ["https://amoy.polygonscan.com"],
+};
+
+// Number -> label maps matching the Solidity enums (index = enum value).
+export const ROLE = ["None", "Manufacturer", "Distributor", "Pharmacy", "Regulator"];
+export const STATUS = ["Created", "In Transit", "At Distributor", "At Pharmacy", "Recalled"];
+
+let readProvider;
+
+// Read-only provider. Always uses the public RPC rather than MetaMask, so reads work for
+// visitors without a wallet and don't break when MetaMask is on a different network.
+export function getProvider() {
+  if (!readProvider) readProvider = new JsonRpcProvider(RPC_URL, CHAIN_ID, { staticNetwork: true });
+  return readProvider;
+}
+
+// Asks MetaMask to connect, switches it to Amoy if needed, and returns the signer.
+export async function getSigner() {
+  if (!window.ethereum) throw new Error("MetaMask not found. Install it to sign transactions.");
+
+  await window.ethereum.request({ method: "eth_requestAccounts" });
+  await ensureAmoyNetwork();
+
+  const provider = new BrowserProvider(window.ethereum);
+  return provider.getSigner();
+}
+
+// getContract() for reads, getContract(true) for transactions.
+export async function getContract(withSigner = false) {
+  const runner = withSigner ? await getSigner() : getProvider();
+  return new Contract(CONTRACT_ADDRESS, ABI, runner);
+}
+
+async function ensureAmoyNetwork() {
+  const current = await window.ethereum.request({ method: "eth_chainId" });
+  if (parseInt(current, 16) === CHAIN_ID) return;
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: AMOY_PARAMS.chainId }],
+    });
+  } catch (err) {
+    // 4902 = MetaMask doesn't know this chain yet, so add it (which also switches to it).
+    if (err.code !== 4902) throw err;
+    await window.ethereum.request({ method: "wallet_addEthereumChain", params: [AMOY_PARAMS] });
+  }
+}
