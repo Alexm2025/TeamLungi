@@ -6,7 +6,8 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
+    {/* On GitHub Pages the app lives under /TeamLungi/, so routes must be read relative to that */}
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <App />
     </BrowserRouter>
   </React.StrictMode>
