@@ -774,3 +774,23 @@ code {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+/* Live network banner */
+.network-banner {
+  margin: 0;
+  padding: 6px 16px;
+  text-align: center;
+  font-size: 0.85rem;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+.network-banner a { color: inherit; }
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  margin-right: 4px;
+  vertical-align: middle;
+}

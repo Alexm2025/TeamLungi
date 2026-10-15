@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Card, Spinner } from "../../components/ui";
-import { DEMO_MODE, ROLE } from "./chain";
+import ApprovalQueue from "../../components/ledger/ApprovalQueue.jsx";
+import { CONTRACT_READY, NETWORK, ROLE } from "./chain";
 import CreateBatch from "./CreateBatch.jsx";
-import { DEMO_ACCOUNTS } from "./demo";
 import MyBatches from "./MyBatches.jsx";
 import ParticipantLookup from "./ParticipantLookup.jsx";
 import RecallCard from "./RecallCard.jsx";
@@ -102,16 +102,25 @@ function DashboardPanels({ account, participant, isAdmin }) {
         {(isAdmin || isRegulator) && <ParticipantLookup canDeactivate={isAdmin} />}
       </div>
 
+      {isRegulator && <ApprovalQueue key={version} />}
       {isRegulator && <RecallList version={version} onRefresh={changed} />}
     </div>
   );
 }
 
+// Roles a home-page box can ask for (?role=manufacturer). The wallet's on-chain role always wins.
+const ROLE_CHOICES = {
+  manufacturer: { label: "Manufacturer", role: 1 },
+  distributor: { label: "Distributor", role: 2 },
+  pharmacy: { label: "Pharmacy", role: 3 },
+  regulator: { label: "Regulator", role: 4 },
+};
+
 // The role picked on the home page (?role=manufacturer), if it's one we know.
 function useRequestedRole() {
   const [params, setParams] = useSearchParams();
   const requested = params.get("role");
-  const valid = requested && Object.hasOwn(DEMO_ACCOUNTS, requested) ? requested : null;
+  const valid = requested && Object.hasOwn(ROLE_CHOICES, requested) ? requested : null;
   const setRequested = (key) => setParams({ role: key }, { replace: true });
   return [valid, setRequested];
 }
@@ -136,14 +145,14 @@ function LiveDashboard() {
 
   // A home-page box can't change a wallet's role (the blockchain decides it), so if the
   // two differ, say which dashboard this wallet actually gets.
-  const requestedRole = requested && DEMO_ACCOUNTS[requested].participant.role;
+  const requestedRole = requested && ROLE_CHOICES[requested].role;
   const mismatch = participant.active && requestedRole && requestedRole !== participant.role;
 
   return (
     <>
       {mismatch && (
         <Alert type="info" className="mb">
-          You chose {DEMO_ACCOUNTS[requested].label}, but this wallet is registered as{" "}
+          You chose {ROLE_CHOICES[requested].label}, but this wallet is registered as{" "}
           {ROLE[participant.role]}, so this is the {ROLE[participant.role]} dashboard. Switch
           accounts in MetaMask to use another role.
         </Alert>
@@ -153,44 +162,18 @@ function LiveDashboard() {
   );
 }
 
-// Preview before the contract is deployed: pick a sample company and see its dashboard.
-// The tab follows ?role= in the address, so the home-page boxes open the matching one.
-function PreviewDashboard() {
-  const [requested, setRequested] = useRequestedRole();
-  const roleKey = requested ?? "manufacturer";
-  const who = DEMO_ACCOUNTS[roleKey];
-
+// Shown only if the site was built without a contract address.
+function NotConnected() {
   return (
-    <div className="dashboard">
-      <Alert type="info" title="Preview with sample data">
-        Choose a role to see that company's dashboard. Buttons that write to the blockchain are
-        switched on once the MediChain contract is live on Polygon Amoy.
-      </Alert>
-      <div className="role-tabs" role="tablist" aria-label="Preview as">
-        {Object.entries(DEMO_ACCOUNTS).map(([key, acc]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={key === roleKey}
-            className={`role-tab role-${acc.participant.role}${key === roleKey ? " selected" : ""}`}
-            onClick={() => setRequested(key)}
-          >
-            {acc.label}
-          </button>
-        ))}
-      </div>
-      {/* key: switching role starts that dashboard fresh */}
-      <DashboardPanels
-        key={roleKey}
-        account={who.address}
-        participant={who.participant}
-        isAdmin={roleKey === "regulator"}
-      />
-    </div>
+    <Card title="Contract not connected">
+      <p className="muted">
+        This build has no MediChain contract address, so there is nothing to show. Set{" "}
+        <code>VITE_CONTRACT_ADDRESS</code> to the address deployed on {NETWORK.name}.
+      </p>
+    </Card>
   );
 }
 
 export default function Dashboard() {
-  return DEMO_MODE ? <PreviewDashboard /> : <LiveDashboard />;
+  return CONTRACT_READY ? <LiveDashboard /> : <NotConnected />;
 }

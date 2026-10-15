@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { keccak256, toUtf8Bytes, ZeroAddress } from "ethers";
 import { ROLE, STATUS } from "../../lib/contract";
-import { getContract, USING_MOCK } from "./contractSource";
+import { CONTRACT_READY, getContract } from "./contractSource";
+import ThreeStepVerification from "../../components/ledger/ThreeStepVerification.jsx";
 import QRScanner from "../../components/qr/QRScanner";
 import LabReportCheck from "./LabReportCheck";
 import "./verify.css";
@@ -107,9 +108,9 @@ export default function VerifyPage() {
     <main className="verify">
       <h1>Verify a medicine batch</h1>
       <p className="verify-sub">Enter the batch ID printed on the pack, or scan its QR code.</p>
-      {USING_MOCK && (
-        <p className="verify-demo">
-          Demo mode: contract not deployed yet. Try PCM-2026-001, AMX-2026-014 or IBU-2024-007.
+      {!CONTRACT_READY && (
+        <p className="verify-error">
+          This build is not connected to a MediChain contract, so batches can't be checked yet.
         </p>
       )}
 
@@ -156,6 +157,17 @@ export default function VerifyPage() {
           )}
 
           {result.details && <LabReportCheck key={batchId} batchId={batchId} />}
+
+          {result.details && (
+            <section className="verify-card">
+              <h3>Full 3-step verification</h3>
+              <p className="verify-sub">
+                Recomputed in your browser from raw blockchain data: the record, every handover's 3 signatures,
+                and the lab report fingerprint.
+              </p>
+              <ThreeStepVerification key={batchId} batchId={batchId} />
+            </section>
+          )}
 
           {result.timeline?.length > 0 && (
             <section className="verify-card">

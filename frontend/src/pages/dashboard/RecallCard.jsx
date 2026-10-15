@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Card, Input } from "../../components/ui";
 import { canRecall } from "../../lib/recall";
-import { DEMO_MODE } from "./chain";
 import { friendlyError } from "./errors";
 import { useTx } from "./useTx";
 import { useWallet } from "./WalletContext";
@@ -24,9 +23,8 @@ export default function RecallCard({ batchId: initialId = "", lockId = false, on
   useEffect(() => {
     const id = batchId.trim();
     setConfirming(false);
-    // Preview mode: no contract to ask, so let the form run; submitting explains it's a preview
-    setCheck({ allowed: DEMO_MODE && Boolean(id), why: "" });
-    if (!id || DEMO_MODE) return;
+    setCheck({ allowed: false, why: "" });
+    if (!id) return;
     let cancelled = false;
     const timer = setTimeout(() => {
       canRecall(account, id)

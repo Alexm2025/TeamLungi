@@ -10,6 +10,7 @@ const STATUS_STYLES = {
   2: { label: "At distributor", tone: "purple" },
   3: { label: "At pharmacy", tone: "green" },
   4: { label: "Recalled", tone: "red" },
+  5: { label: "Awaiting approval", tone: "amber" },
 };
 
 // `status` can be a number or the BigInt ethers returns for enums.

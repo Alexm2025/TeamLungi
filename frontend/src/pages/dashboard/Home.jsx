@@ -5,25 +5,31 @@ import { Link } from "react-router-dom";
 const STEPS = [
   {
     who: "Manufacturer",
-    what: "Registers a batch: drug, dates, quantity and a document hash.",
+    what: "Registers a batch with its lab-report fingerprint, then signs step 1 of each hand-off.",
     to: "/dashboard?role=manufacturer",
     cta: "Open manufacturer dashboard",
   },
   {
     who: "Distributor",
-    what: "Accepts custody on-chain and moves the batch along.",
+    what: "Signs step 2 to confirm it physically received the batch, then sends it on.",
     to: "/dashboard?role=distributor",
     cta: "Open distributor dashboard",
   },
   {
     who: "Pharmacy",
-    what: "Receives the batch; every hand-off is now on record.",
+    what: "Signs for the delivery; the full signed custody trail is now on record.",
     to: "/dashboard?role=pharmacy",
     cta: "Open pharmacy dashboard",
   },
   {
+    who: "Regulator",
+    what: "Countersigns every hand-off (step 3) and can recall any batch instantly.",
+    to: "/dashboard?role=regulator",
+    cta: "Open regulator dashboard",
+  },
+  {
     who: "Anyone",
-    what: "Checks a batch's origin and custody trail, no login needed.",
+    what: "Verifies a batch in 3 independent checks and browses the public ledger, no login needed.",
     to: "/verify",
     cta: "Verify a batch",
   },

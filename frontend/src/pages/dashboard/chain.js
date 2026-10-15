@@ -1,17 +1,11 @@
-// The one place dashboard code gets contract helpers from (Member A's lib).
-import { ZeroAddress } from "ethers";
-import { CONTRACT_ADDRESS, getContract } from "../../lib/contract";
-import { getContract as getDemoContract } from "../verify/mockContract";
+// The one place dashboard code gets contract helpers from (lib/contract).
+import { getContract, isContractConfigured } from "../../lib/contract";
 
 export * from "../../lib/contract";
 
-// False until the contract is deployed and VITE_CONTRACT_ADDRESS is set.
-export const CONTRACT_READY = CONTRACT_ADDRESS !== ZeroAddress;
+// False until the contract is deployed and VITE_CONTRACT_ADDRESS is set; pages then show a
+// clear "not connected" notice instead of failing on every call. There is no sample data.
+export const CONTRACT_READY = isContractConfigured();
 
-// Until then the public site runs as a clearly labelled preview on sample data, so it can
-// be shown before deployment. Setting the address switches everything to the real chain.
-export const DEMO_MODE = !CONTRACT_READY;
-
-// Read-only contract for pages: the real one, or Member C's sample data (the same data
-// the verify page shows) in preview mode.
-export const getReadContract = DEMO_MODE ? getDemoContract : () => getContract();
+// Read-only contract for pages (kept as a named helper so components read clearly).
+export const getReadContract = () => getContract();

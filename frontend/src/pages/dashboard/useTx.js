@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useToast } from "../../components/ui";
-import { DEMO_MODE, getContract } from "./chain";
+import { getContract } from "./chain";
 import { friendlyError } from "./errors";
 import { txUrl } from "./format";
 
@@ -15,14 +15,6 @@ export function useTx() {
 
   const run = useCallback(
     async (title, send) => {
-      // Preview mode has no contract to write to, so say so instead of failing.
-      if (DEMO_MODE) {
-        toast.info(
-          "This is a preview with sample data. Actions are enabled once the MediChain contract is live on Polygon Amoy.",
-          { title }
-        );
-        return null;
-      }
       setBusy(true);
       const id = toast.pending("Confirm the transaction in MetaMask…", { title });
       try {
@@ -30,7 +22,8 @@ export function useTx() {
         // If the contract would revert ("Wrong role" etc.), ethers finds out while
         // estimating gas, before MetaMask opens, so a bad request costs nothing.
         const tx = await send(contract);
-        const link = { href: txUrl(tx.hash), label: "View on PolygonScan" };
+        const href = txUrl(tx.hash);
+        const link = href ? { href, label: "View on block explorer" } : undefined;
         toast.update(id, { type: "pending", message: "Waiting for the block to be mined…", link });
         const receipt = await tx.wait();
         toast.update(id, { type: "success", message: "Confirmed on-chain.", link });

@@ -1,4 +1,5 @@
-const EXPLORER = "https://amoy.polygonscan.com";
+// Explorer links follow the configured network (Sepolia, Amoy or none on a local chain).
+export { txUrl, addressUrl, blockUrl } from "../../lib/contract";
 
 // 0x1234567890abcdef... -> 0x1234…cdef
 export function shortAddress(address) {
@@ -9,8 +10,6 @@ export function shortAddress(address) {
 export function sameAddress(a, b) {
   return Boolean(a && b) && a.toLowerCase() === b.toLowerCase();
 }
-
-export const txUrl = (hash) => `${EXPLORER}/tx/${hash}`;
 
 // "2026-10-15" from a date picker -> unix seconds at midnight UTC (what the contract stores)
 export function dateInputToUnix(value) {

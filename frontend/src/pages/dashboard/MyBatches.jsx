@@ -8,9 +8,17 @@ import { useTx } from "./useTx";
 
 // How this account relates to a batch; `order` puts things that need action first.
 function relation(batch, account) {
-  if (sameAddress(batch.pendingReceiver, account)) return { label: "Incoming: accept it", order: 0 };
+  // Handovers need 3 signatures: sender (1), receiver (2), regulator (3).
+  if (sameAddress(batch.pendingReceiver, account)) {
+    return batch.receiverAccepted
+      ? { label: "Accepted, awaiting regulator (3/3)", order: 1.5 }
+      : { label: "Incoming: accept it (2/3)", order: 0 };
+  }
   if (sameAddress(batch.currentOwner, account) && batch.pendingReceiver) {
-    return { label: "Sent, waiting for receiver", order: 1 };
+    return {
+      label: batch.receiverAccepted ? "Receiver accepted, awaiting regulator (3/3)" : "Sent, waiting for receiver (2/3)",
+      order: 1,
+    };
   }
   if (sameAddress(batch.currentOwner, account)) return { label: "In your custody", order: 2 };
   return { label: "Passed on", order: 3 };

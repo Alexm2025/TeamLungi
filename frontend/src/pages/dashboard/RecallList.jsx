@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card, Spinner, Table } from "../../components/ui";
-import { CHAIN_ID, DEMO_MODE, DEPLOY_BLOCK } from "./chain";
+import { CHAIN_ID, DEPLOY_BLOCK } from "./chain";
 import { loadRecalls } from "./data";
 import { friendlyError } from "./errors";
 import { formatDateTime, shortAddress, txUrl } from "./format";
 
 // Without a deploy block, the search would start at block 0. That's fine on a local
 // Hardhat chain but means millions of blocks on Amoy, so we skip it there.
-// (Preview mode reads sample data, so there is nothing to search.)
-const CAN_SEARCH = DEMO_MODE || DEPLOY_BLOCK > 0 || CHAIN_ID === 31337;
+const CAN_SEARCH = DEPLOY_BLOCK > 0 || CHAIN_ID === 31337;
 
 const COLUMNS = [
   {
@@ -32,7 +31,7 @@ const COLUMNS = [
           {formatDateTime(r.timestamp)}
         </a>
       ) : (
-        "Sample data"
+        formatDateTime(r.timestamp)
       ),
   },
 ];

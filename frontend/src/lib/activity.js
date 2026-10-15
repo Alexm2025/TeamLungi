@@ -7,10 +7,12 @@
 //
 // Each item: { type, label, batchId, from, to, by, account, reason, drugName, role, name,
 //              blockNumber, txHash, timestamp (unix seconds) }
-import { DEPLOY_BLOCK, getContract, getProvider, ROLE } from "./contract";
+import { CHAIN_ID, DEPLOY_BLOCK, getContract, getProvider, ROLE } from "./contract";
 
-// The public Amoy RPC rejects log queries spanning more than 10,000 blocks.
+// Public RPCs reject log queries spanning more than 10,000 blocks.
 const MAX_BLOCK_RANGE = 9_000;
+// Without a deploy block on a public chain, only look this far back instead of scanning from genesis.
+const FALLBACK_LOOKBACK = 150_000;
 
 const LABELS = {
   ParticipantRegistered: "Participant registered",
@@ -86,10 +88,13 @@ export function toItem(log) {
 let eventCache = { items: [], nextBlock: null, fromBlock: null };
 let inFlight = null;
 
-async function refreshEvents(fromBlock) {
-  if (eventCache.fromBlock !== fromBlock) eventCache = { items: [], nextBlock: fromBlock, fromBlock };
+async function refreshEvents(requestedFrom) {
   const contract = await getContract();
   const latest = await getProvider().getBlockNumber();
+  const fromBlock = requestedFrom || (CHAIN_ID === 31337 ? 0 : Math.max(0, latest - FALLBACK_LOOKBACK));
+  if (eventCache.fromBlock !== fromBlock && !(requestedFrom === 0 && eventCache.fromBlock !== null)) {
+    eventCache = { items: [], nextBlock: fromBlock, fromBlock };
+  }
   // A restarted local chain is shorter than what we cached; start over.
   if (latest < eventCache.nextBlock - 1) eventCache = { items: [], nextBlock: fromBlock, fromBlock };
 

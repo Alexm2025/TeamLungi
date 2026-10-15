@@ -11,8 +11,9 @@ const TITLES = {
   cancel: (id) => `Cancel transfer of ${id}`,
 };
 
-// Custody hand-over in two steps: the holder sends (initiateTransfer), the receiver
-// accepts (acceptTransfer). Until it's accepted, the sender can cancel.
+// Custody hand-over in three signed steps: the holder sends (initiateTransfer), the receiver
+// accepts (acceptTransfer), and the regulator approves (approveTransfer, in the approval queue).
+// Until the regulator approves, the sender can cancel.
 // `actions` picks which buttons show; `lockId` fixes the batch (used on the batch page).
 export default function TransferCard({
   batchId: initialId = "",
@@ -74,7 +75,7 @@ export default function TransferCard({
   return (
     <Card
       title={lockId ? "Hand-over" : "Transfer custody"}
-      subtitle="The receiver must accept before custody changes."
+      subtitle="3 signatures: you send, the receiver accepts, the regulator approves. Custody moves only after all three."
     >
       <form
         onSubmit={(e) => {
