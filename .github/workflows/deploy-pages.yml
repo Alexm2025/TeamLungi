@@ -42,6 +42,7 @@ jobs:
           VITE_CONTRACT_ADDRESS: ${{ vars.VITE_CONTRACT_ADDRESS }}
           VITE_DEPLOY_BLOCK: ${{ vars.VITE_DEPLOY_BLOCK }}
           VITE_CHAIN_ID: ${{ vars.VITE_CHAIN_ID }}
+          VITE_RPC_URL: ${{ vars.VITE_RPC_URL }}
 
       # GitHub Pages has no SPA routing: serving index.html as the 404 page lets
       # deep links like /TeamLungi/verify/BATCH-001 load the app instead of an error.
