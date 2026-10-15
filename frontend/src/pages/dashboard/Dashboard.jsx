@@ -123,7 +123,9 @@ function LiveDashboard() {
       </section>
     );
   }
-  if (loadingRole) return <Spinner label="Loading your role…" />;
+  // Only block the page on the first load; later role refreshes (e.g. after registering someone)
+  // keep the dashboard on screen so forms don't lose what was typed.
+  if (loadingRole && !participant.role) return <Spinner label="Loading your role…" />;
   return <DashboardPanels account={account} participant={participant} isAdmin={isAdmin} />;
 }
 
