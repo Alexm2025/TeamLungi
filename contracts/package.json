@@ -9,7 +9,9 @@
     "node": "hardhat node",
     "export-abi": "hardhat compile && node scripts/export-abi.js",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
-    "deploy:amoy": "hardhat run scripts/deploy.js --network amoy"
+    "deploy:amoy": "hardhat run scripts/deploy.js --network amoy",
+    "seed:local": "hardhat run scripts/seed.js --network localhost",
+    "seed:amoy": "hardhat run scripts/seed.js --network amoy"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
