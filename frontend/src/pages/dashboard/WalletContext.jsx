@@ -47,6 +47,7 @@ export function WalletProvider({ children }) {
   const [loadingRole, setLoadingRole] = useState(false);
   const [error, setError] = useState("");
   const latest = useRef(null);
+  const signingIn = useRef(false);
 
   const readRole = useCallback(async (address) => {
     const c = await getContract();
@@ -99,6 +100,7 @@ export function WalletProvider({ children }) {
     async (roleKey) => {
       const wanted = ROLE_OPTIONS[roleKey];
       if (!wanted) return false;
+      signingIn.current = true;
       setConnecting(true);
       setError("");
       try {
@@ -107,13 +109,14 @@ export function WalletProvider({ children }) {
         const r = await readRole(address);
         const holdsRole = r.participant.active && r.participant.role === wanted.role;
         if (!holdsRole) {
+          if (!CONTRACT_READY) throw new Error("This site is not connected to a MediChain contract.");
           const actual = r.participant.active
             ? `registered as ${Object.values(ROLE_OPTIONS).find((o) => o.role === r.participant.role)?.label ?? "another role"}`
             : r.participant.role
               ? "deactivated"
               : "not registered on MediChain";
+          await signOut(); // forget this wallet first, then explain (signOut clears old errors)
           setError(`This wallet (${address.slice(0, 6)}…${address.slice(-4)}) is ${actual}, not ${wanted.label}. Switch to the right account in MetaMask, or choose another role.`);
-          await signOut();
           return false;
         }
         const next = { role: roleKey, account: address };
@@ -128,6 +131,7 @@ export function WalletProvider({ children }) {
         setError(friendlyError(err));
         return false;
       } finally {
+        signingIn.current = false;
         setConnecting(false);
       }
     },
@@ -141,6 +145,7 @@ export function WalletProvider({ children }) {
     if (!eth) return;
 
     const onAccounts = (accounts) => {
+      if (signingIn.current) return; // signIn() handles the account itself
       const current = accounts[0] ? getAddress(accounts[0]) : null;
       const saved = readSession();
       if (!current || !saved || !sameAddr(current, saved.account)) {
@@ -150,14 +155,11 @@ export function WalletProvider({ children }) {
       setAccount(current);
       loadRole(current);
     };
-    const onChain = () => window.location.reload();
 
     eth.request({ method: "eth_accounts" }).then(onAccounts).catch(() => {});
     eth.on?.("accountsChanged", onAccounts);
-    eth.on?.("chainChanged", onChain);
     return () => {
       eth.removeListener?.("accountsChanged", onAccounts);
-      eth.removeListener?.("chainChanged", onChain);
     };
   }, [loadRole, clearLocal]);
 
