@@ -160,6 +160,7 @@ contract MedChain {
 
         require(b.status != Status.Recalled, "Batch recalled");
         require(b.pendingReceiver == msg.sender, "Not the pending receiver");
+        require(participants[msg.sender].active, "Receiver inactive");
 
         address from = b.currentOwner;
         b.currentOwner = msg.sender;
