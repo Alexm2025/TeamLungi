@@ -1,6 +1,6 @@
 // Single entry point the frontend uses to talk to the MedChain contract.
 // Pages import from here instead of creating providers/contracts themselves.
-import { BrowserProvider, Contract, JsonRpcProvider } from "ethers";
+import { BrowserProvider, Contract, JsonRpcProvider, parseUnits } from "ethers";
 import MedChainABI from "./MedChain.abi.json";
 
 // Set after deploying (`npm run deploy:amoy` in contracts/ prints it).
@@ -61,6 +61,27 @@ export const STATUS = ["Created", "In Transit", "At Distributor", "At Pharmacy",
 
 let readProvider;
 
+// Wallets often over-estimate fees on testnets and then show a fee warning. Before a transaction
+// goes to MetaMask, attach the real network fee (current base fee x2 plus a small tip) so MetaMask
+// shows a "site suggested" fee close to what it actually costs.
+// Testnet blocks are far from full, so a 0.01 gwei tip is mined in the next block (~12 s).
+const TIP = parseUnits("0.01", "gwei");
+const hex = (n) => `0x${n.toString(16)}`;
+class SuggestedFeeProvider extends BrowserProvider {
+  async send(method, params) {
+    if (method === "eth_sendTransaction" && params?.[0] && !params[0].maxFeePerGas && !params[0].gasPrice) {
+      try {
+        const block = await getProvider().getBlock("latest");
+        const base = block?.baseFeePerGas ?? 0n;
+        params = [{ ...params[0], maxPriorityFeePerGas: hex(TIP), maxFeePerGas: hex(base * 2n + TIP) }];
+      } catch {
+        // fee lookup failed: let MetaMask choose the fee as usual
+      }
+    }
+    return super.send(method, params);
+  }
+}
+
 // Read-only provider. Always uses the public RPC rather than MetaMask, so reads work for
 // visitors without a wallet and don't break when MetaMask is on a different network.
 export function getProvider() {
@@ -75,7 +96,7 @@ export async function getSigner() {
   await window.ethereum.request({ method: "eth_requestAccounts" });
   await ensureNetwork();
 
-  const provider = new BrowserProvider(window.ethereum);
+  const provider = IS_LOCAL ? new BrowserProvider(window.ethereum) : new SuggestedFeeProvider(window.ethereum);
   return provider.getSigner();
 }
 
