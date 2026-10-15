@@ -57,22 +57,6 @@ export async function fetchParticipants(addresses) {
   return Object.fromEntries(entries); // keyed by lower-case address
 }
 
-// Batch details + custody history + recall reason, for the detail page.
-export async function fetchBatch(batchId) {
-  const c = await getReadContract();
-  const [raw, history] = await Promise.all([c.getBatch(batchId), c.getHistory(batchId)]);
-  const batch = toBatch(raw);
-  // The contract keys its mappings by keccak256(batchId); ethers' id() computes exactly that
-  batch.recallReason = batch.status === 4 ? await c.recallReason(hashText(batchId)) : "";
-  const handovers = history.map((h) => ({
-    from: h.from,
-    to: h.to,
-    timestamp: Number(h.timestamp),
-    location: h.location,
-  }));
-  return { batch, handovers };
-}
-
 // ---------- batch IDs this browser has seen ----------
 // The contract can't list batches by owner, so we find them from events (below).
 // This local list is a backup for when the public RPC limits event searches.
@@ -208,6 +192,7 @@ export async function loadRecalls() {
     if (toBatch(await c.getBatch(id)).status !== 4) continue;
     recalled.push({
       batchId: id,
+      // The contract keys recallReason by keccak256(batchId); ethers' id() computes exactly that
       reason: await c.recallReason(hashText(id)),
       by: DEMO_ACCOUNTS.regulator.address,
       timestamp: null,

@@ -16,7 +16,7 @@ const COLUMNS = [
     key: "batchId",
     header: "Batch",
     render: (r) => (
-      <Link to={`/dashboard/batch/${encodeURIComponent(r.batchId)}`} className="mono">
+      <Link to={`/verify/${encodeURIComponent(r.batchId)}`} className="mono">
         {r.batchId}
       </Link>
     ),

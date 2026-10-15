@@ -57,7 +57,7 @@ export default function MyBatches({ account, version, canSend, onSend, onChange 
       key: "batchId",
       header: "Batch",
       render: (b) => (
-        <Link to={`/dashboard/batch/${encodeURIComponent(b.batchId)}`} className="mono">
+        <Link to={`/verify/${encodeURIComponent(b.batchId)}`} className="mono">
           {b.batchId}
         </Link>
       ),
