@@ -35,10 +35,12 @@ jobs:
       - run: npm ci
 
       # The site lives under /TeamLungi/, so assets need that base path.
-      # The contract address comes from a repo variable, so redeploying the contract needs no code change.
+      # Contract address and deploy block come from repo variables, so redeploying the contract
+      # needs no code change. The deploy block lets the activity feed skip older chain history.
       - run: npx vite build --base=/TeamLungi/
         env:
           VITE_CONTRACT_ADDRESS: ${{ vars.VITE_CONTRACT_ADDRESS }}
+          VITE_DEPLOY_BLOCK: ${{ vars.VITE_DEPLOY_BLOCK }}
 
       # GitHub Pages has no SPA routing: serving index.html as the 404 page lets
       # deep links like /TeamLungi/verify/BATCH-001 load the app instead of an error.
