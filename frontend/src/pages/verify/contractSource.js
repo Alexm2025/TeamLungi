@@ -24,7 +24,9 @@ async function localVerifyDocument(batchId, file) {
   return keccak256(bytes) === batch.docHash;
 }
 
-const useLib = !USING_MOCK && typeof lib.verifyDocument === "function";
+// Copy into a plain object so the bundler doesn't warn while these exports don't exist yet.
+const libFns = { ...lib };
+const useLib = !USING_MOCK && typeof libFns.verifyDocument === "function";
 
-export const hasDocument = useLib && lib.hasDocument ? lib.hasDocument : localHasDocument;
-export const verifyDocument = useLib ? lib.verifyDocument : localVerifyDocument;
+export const hasDocument = useLib && libFns.hasDocument ? libFns.hasDocument : localHasDocument;
+export const verifyDocument = useLib ? libFns.verifyDocument : localVerifyDocument;
