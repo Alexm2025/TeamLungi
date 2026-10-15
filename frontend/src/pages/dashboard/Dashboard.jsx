@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Card, Spinner } from "../../components/ui";
 import { DEMO_MODE, ROLE } from "./chain";
 import CreateBatch from "./CreateBatch.jsx";
@@ -106,9 +107,19 @@ function DashboardPanels({ account, participant, isAdmin }) {
   );
 }
 
+// The role picked on the home page (?role=manufacturer), if it's one we know.
+function useRequestedRole() {
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("role");
+  const valid = requested && Object.hasOwn(DEMO_ACCOUNTS, requested) ? requested : null;
+  const setRequested = (key) => setParams({ role: key }, { replace: true });
+  return [valid, setRequested];
+}
+
 // Real dashboard: the role comes from the connected wallet.
 function LiveDashboard() {
   const { account, participant, isAdmin, loadingRole, connecting, connect } = useWallet();
+  const [requested] = useRequestedRole();
 
   if (!account) {
     return (
@@ -122,12 +133,31 @@ function LiveDashboard() {
     );
   }
   if (loadingRole) return <Spinner label="Loading your role…" />;
-  return <DashboardPanels account={account} participant={participant} isAdmin={isAdmin} />;
+
+  // A home-page box can't change a wallet's role (the blockchain decides it), so if the
+  // two differ, say which dashboard this wallet actually gets.
+  const requestedRole = requested && DEMO_ACCOUNTS[requested].participant.role;
+  const mismatch = participant.active && requestedRole && requestedRole !== participant.role;
+
+  return (
+    <>
+      {mismatch && (
+        <Alert type="info" className="mb">
+          You chose {DEMO_ACCOUNTS[requested].label}, but this wallet is registered as{" "}
+          {ROLE[participant.role]}, so this is the {ROLE[participant.role]} dashboard. Switch
+          accounts in MetaMask to use another role.
+        </Alert>
+      )}
+      <DashboardPanels account={account} participant={participant} isAdmin={isAdmin} />
+    </>
+  );
 }
 
 // Preview before the contract is deployed: pick a sample company and see its dashboard.
+// The tab follows ?role= in the address, so the home-page boxes open the matching one.
 function PreviewDashboard() {
-  const [roleKey, setRoleKey] = useState("manufacturer");
+  const [requested, setRequested] = useRequestedRole();
+  const roleKey = requested ?? "manufacturer";
   const who = DEMO_ACCOUNTS[roleKey];
 
   return (
@@ -144,7 +174,7 @@ function PreviewDashboard() {
             role="tab"
             aria-selected={key === roleKey}
             className={`role-tab role-${acc.participant.role}${key === roleKey ? " selected" : ""}`}
-            onClick={() => setRoleKey(key)}
+            onClick={() => setRequested(key)}
           >
             {acc.label}
           </button>
