@@ -57,7 +57,12 @@ sequenceDiagram
     C-->>U: exists, recalled, expired, drug, manufacturer, holder, hops
 ```
 
-> Function names for writes are illustrative. The exact names are in Member A's contract under `contracts/`.
+Rules enforced by the contract:
+
+- **Admin**: the wallet that deploys the contract. It is the only account that can `registerParticipant` (address, role, name, location) or `deactivateParticipant`. The deployer is also registered as the first Regulator.
+- **Allowed hops**: Manufacturer → Distributor, Distributor → Distributor, Distributor → Pharmacy. Anything else (for example Manufacturer → Pharmacy) is rejected.
+- **Cancel**: until the receiver accepts, the sender can `cancelTransfer` (for example if they picked the wrong receiver).
+- **Recall**: allowed for a Regulator **or** the batch's own manufacturer. A recalled batch can no longer be transferred.
 
 ## Batch status
 
@@ -68,6 +73,8 @@ stateDiagram-v2
     InTransit --> AtDistributor: distributor accepts
     AtDistributor --> InTransit: initiate transfer
     InTransit --> AtPharmacy: pharmacy accepts
+    InTransit --> Created: manufacturer cancels
+    InTransit --> AtDistributor: distributor cancels
     Created --> Recalled: regulator
     InTransit --> Recalled: regulator
     AtDistributor --> Recalled: regulator

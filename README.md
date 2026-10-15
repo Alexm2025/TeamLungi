@@ -45,13 +45,14 @@ More detail and diagrams are in [docs/architecture.md](docs/architecture.md).
 
 | Role | Can do |
 |---|---|
-| Manufacturer | Create batches, start transfers to distributors |
-| Distributor | Accept batches, start transfers to pharmacies |
+| Admin (contract deployer) | Register and deactivate participants; also starts as a Regulator |
+| Manufacturer | Create batches, start transfers to distributors, recall its own batches |
+| Distributor | Accept batches, start transfers to other distributors or pharmacies |
 | Pharmacy | Accept batches (final holder before sale) |
-| Regulator | Recall a batch with a reason |
+| Regulator | Recall any batch with a reason |
 | Customer (anyone) | Verify a batch by QR scan or ID: free, with no wallet |
 
-Batch status: `Created → InTransit → AtDistributor → InTransit → AtPharmacy`, and `Recalled` can happen at any point.
+Batch status: `Created → InTransit → AtDistributor → InTransit → AtPharmacy`. A sender can cancel a pending transfer, and `Recalled` can happen at any point.
 
 ## Tech stack
 
@@ -81,7 +82,17 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173/verify. Camera scanning works on `localhost` or over HTTPS.
+Then open http://localhost:5173/verify. Camera scanning works on `localhost` or over HTTPS. Until a contract address is configured, the verify page runs in demo mode with sample batches (`PCM-2026-001`, `AMX-2026-014`, `IBU-2024-007`).
+
+To point the frontend at a deployed contract, create `frontend/.env`:
+
+```
+VITE_CONTRACT_ADDRESS=0xYourDeployedAddress
+```
+
+### Live demo
+
+Every push to `main` deploys the frontend to https://alexm2025.github.io/TeamLungi/ (contract address from the `VITE_CONTRACT_ADDRESS` repository variable).
 
 ### Deployed contract
 
