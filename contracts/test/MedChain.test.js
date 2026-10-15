@@ -435,4 +435,80 @@ describe("MedChain", function () {
       expect((await medChain.verifyBatch(BATCH_ID)).expired).to.be.true;
     });
   });
+
+  describe("Security & administration", function () {
+    it("pause freezes creation and every handover step, but recalls still work", async function () {
+      const { medChain, admin, manufacturer, distributor } = await loadFixture(withBatchFixture);
+      await medChain.connect(manufacturer).initiateTransfer(BATCH_ID, distributor.address);
+
+      await expect(medChain.connect(admin).pause()).to.emit(medChain, "Paused").withArgs(admin.address);
+      const now = await time.latest();
+      await expect(
+        medChain.connect(manufacturer).createBatch("B-2", "Drug", now, now + DAY, 1, ethers.ZeroHash)
+      ).to.be.revertedWith("Paused");
+      await expect(medChain.connect(distributor).acceptTransfer(BATCH_ID)).to.be.revertedWith("Paused");
+
+      // Safety actions are never blocked.
+      await expect(medChain.connect(admin).recallBatch(BATCH_ID, "Emergency")).to.emit(medChain, "BatchRecalled");
+
+      await expect(medChain.connect(admin).unpause()).to.emit(medChain, "Unpaused");
+      expect(await medChain.paused()).to.be.false;
+    });
+
+    it("only the admin can pause or unpause", async function () {
+      const { medChain, manufacturer } = await loadFixture(deployWithParticipantsFixture);
+      await expect(medChain.connect(manufacturer).pause()).to.be.revertedWith("Only admin");
+      await expect(medChain.unpause()).to.be.revertedWith("Not paused");
+    });
+
+    it("moves admin rights in two steps, and only to the proposed address", async function () {
+      const { medChain, admin, manufacturer, outsider } = await loadFixture(deployWithParticipantsFixture);
+
+      await expect(medChain.connect(manufacturer).proposeAdmin(outsider.address)).to.be.revertedWith("Only admin");
+      await expect(medChain.proposeAdmin(outsider.address))
+        .to.emit(medChain, "AdminTransferStarted")
+        .withArgs(admin.address, outsider.address);
+      expect(await medChain.admin()).to.equal(admin.address); // nothing changes until accepted
+
+      await expect(medChain.connect(manufacturer).acceptAdmin()).to.be.revertedWith("Not proposed admin");
+      await expect(medChain.connect(outsider).acceptAdmin())
+        .to.emit(medChain, "AdminTransferred")
+        .withArgs(admin.address, outsider.address);
+      expect(await medChain.admin()).to.equal(outsider.address);
+      expect(await medChain.pendingAdmin()).to.equal(ethers.ZeroAddress);
+      await expect(medChain.connect(admin).pause()).to.be.revertedWith("Only admin");
+    });
+
+    it("validates batch and participant inputs", async function () {
+      const { medChain, manufacturer, outsider } = await loadFixture(deployWithParticipantsFixture);
+      const now = await time.latest();
+      const create = (id, drug, mfg, exp) =>
+        medChain.connect(manufacturer).createBatch(id, drug, mfg, exp, 1, ethers.ZeroHash);
+
+      await expect(create("", "Drug", now, now + DAY)).to.be.revertedWith("Batch ID 1-64 chars");
+      await expect(create("X".repeat(65), "Drug", now, now + DAY)).to.be.revertedWith("Batch ID 1-64 chars");
+      await expect(create("B-1", "", now, now + DAY)).to.be.revertedWith("Drug name 1-100 chars");
+      await expect(create("B-1", "Drug", now - 3 * DAY, now - DAY)).to.be.revertedWith("Already expired");
+      await expect(medChain.registerParticipant(outsider.address, Role.Pharmacy, "", "X")).to.be.revertedWith(
+        "Name 1-100 chars"
+      );
+    });
+
+    it("rejects deactivating an account that isn't active", async function () {
+      const { medChain, distributor, outsider } = await loadFixture(deployWithParticipantsFixture);
+      await medChain.deactivateParticipant(distributor.address);
+      await expect(medChain.deactivateParticipant(distributor.address)).to.be.revertedWith("Not active");
+      await expect(medChain.deactivateParticipant(outsider.address)).to.be.revertedWith("Not active");
+    });
+
+    it("lists every batch by index", async function () {
+      const { medChain, manufacturer } = await loadFixture(withBatchFixture);
+      const now = await time.latest();
+      await medChain.connect(manufacturer).createBatch("B-2", "Drug", now, now + DAY, 1, ethers.ZeroHash);
+
+      expect(await medChain.batchIdAt(0)).to.equal(BATCH_ID);
+      expect(await medChain.batchIdAt(1)).to.equal("B-2");
+      await expect(medChain.batchIdAt(2)).to.be.revertedWith("Index out of range");
+    });
+  });
 });

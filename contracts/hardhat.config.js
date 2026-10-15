@@ -12,6 +12,8 @@ const accounts = isValidKey ? [PRIVATE_KEY.startsWith("0x") ? PRIVATE_KEY : `0x$
 module.exports = {
   solidity: {
     version: "0.8.24",
+    // Optimizer keeps the bytecode under the 24 KB contract size limit and cuts gas per call.
+    settings: { optimizer: { enabled: true, runs: 200 } },
   },
   networks: {
     amoy: {

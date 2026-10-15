@@ -22,6 +22,10 @@ const LABELS = {
   TransferRejected: "Transfer rejected by regulator",
   TransferCancelled: "Transfer cancelled",
   BatchRecalled: "Batch recalled",
+  AdminTransferStarted: "Admin handover proposed",
+  AdminTransferred: "Admin handover completed",
+  Paused: "System paused (emergency)",
+  Unpaused: "System resumed",
 };
 
 const blockTimeCache = new Map();
@@ -65,6 +69,13 @@ export function toItem(log) {
       return { ...item, batchId: a.batchId, by: a.by };
     case "BatchRecalled":
       return { ...item, batchId: a.batchId, reason: a.reason, by: a.by };
+    case "AdminTransferStarted":
+      return { ...item, from: a.currentAdmin, to: a.proposedAdmin };
+    case "AdminTransferred":
+      return { ...item, from: a.previousAdmin, to: a.newAdmin };
+    case "Paused":
+    case "Unpaused":
+      return { ...item, by: a.by };
     default:
       return item;
   }

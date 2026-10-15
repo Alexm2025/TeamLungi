@@ -51,6 +51,8 @@ contract MedChain {
 
     // ───────────────────────── Storage ─────────────────────────
     address public admin;
+    address public pendingAdmin;   // two-step admin handover: proposed, then accepted
+    bool public paused;            // emergency stop for supply-chain actions (recalls still allowed)
     mapping(address => Participant) public participants;
     mapping(bytes32 => Batch) private batches;          // key = keccak256(batchId)
     mapping(bytes32 => Handover[]) private history;
@@ -67,10 +69,19 @@ contract MedChain {
     event TransferRejected(string batchId, address indexed by, string reason);
     event TransferCancelled(string batchId, address indexed by);
     event BatchRecalled(string batchId, string reason, address indexed by);
+    event AdminTransferStarted(address indexed currentAdmin, address indexed proposedAdmin);
+    event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
+    event Paused(address indexed by);
+    event Unpaused(address indexed by);
 
     // ───────────────────────── Modifiers ─────────────────────────
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin");
+        _;
+    }
+
+    modifier whenNotPaused() {
+        require(!paused, "Paused");
         _;
     }
 
@@ -99,13 +110,47 @@ contract MedChain {
     ) external onlyAdmin {
         require(account != address(0), "Zero address");
         require(role != Role.None, "Invalid role");
+        require(bytes(name).length > 0 && bytes(name).length <= 100, "Name 1-100 chars");
+        require(bytes(location).length <= 100, "Location max 100 chars");
         participants[account] = Participant(role, name, location, true);
         emit ParticipantRegistered(account, role, name);
     }
 
     function deactivateParticipant(address account) external onlyAdmin {
+        require(participants[account].active, "Not active");
         participants[account].active = false;
         emit ParticipantDeactivated(account);
+    }
+
+    // ───────────────────────── Admin / emergency ─────────────────────────
+    /// Step 1 of moving admin rights (e.g. to a multisig). Nothing changes until the new admin accepts,
+    /// so a typo in the address can't lock everyone out.
+    function proposeAdmin(address newAdmin) external onlyAdmin {
+        require(newAdmin != address(0), "Zero address");
+        pendingAdmin = newAdmin;
+        emit AdminTransferStarted(admin, newAdmin);
+    }
+
+    /// Step 2: the proposed address proves it controls its key by calling this.
+    function acceptAdmin() external {
+        require(msg.sender == pendingAdmin, "Not proposed admin");
+        emit AdminTransferred(admin, msg.sender);
+        admin = msg.sender;
+        pendingAdmin = address(0);
+    }
+
+    /// Emergency stop: freezes batch creation and handovers (e.g. a compromised wallet).
+    /// Recalls keep working while paused, because safety actions must never be blocked.
+    function pause() external onlyAdmin {
+        require(!paused, "Already paused");
+        paused = true;
+        emit Paused(msg.sender);
+    }
+
+    function unpause() external onlyAdmin {
+        require(paused, "Not paused");
+        paused = false;
+        emit Unpaused(msg.sender);
     }
 
     // ───────────────────────── Batches ─────────────────────────
@@ -116,10 +161,13 @@ contract MedChain {
         uint256 expiryDate,
         uint256 quantity,
         bytes32 docHash
-    ) external onlyRole(Role.Manufacturer) {
+    ) external whenNotPaused onlyRole(Role.Manufacturer) {
         bytes32 k = _key(batchId);
         require(!batches[k].exists, "Batch ID already used");
+        require(bytes(batchId).length > 0 && bytes(batchId).length <= 64, "Batch ID 1-64 chars");
+        require(bytes(drugName).length > 0 && bytes(drugName).length <= 100, "Drug name 1-100 chars");
         require(expiryDate > mfgDate, "Expiry before mfg");
+        require(expiryDate > block.timestamp, "Already expired");
         require(quantity > 0, "Quantity 0");
 
         batches[k] = Batch({
@@ -144,7 +192,7 @@ contract MedChain {
     }
 
     /// Step 1 of 3: current owner proposes a receiver.
-    function initiateTransfer(string calldata batchId, address to) external batchExists(batchId) {
+    function initiateTransfer(string calldata batchId, address to) external whenNotPaused batchExists(batchId) {
         bytes32 k = _key(batchId);
         Batch storage b = batches[k];
 
@@ -161,7 +209,7 @@ contract MedChain {
     }
 
     /// Step 2 of 3: receiver confirms they physically got the batch. Custody does not move yet.
-    function acceptTransfer(string calldata batchId) external batchExists(batchId) {
+    function acceptTransfer(string calldata batchId) external whenNotPaused batchExists(batchId) {
         Batch storage b = batches[_key(batchId)];
 
         require(b.status != Status.Recalled, "Batch recalled");
@@ -175,7 +223,12 @@ contract MedChain {
     }
 
     /// Step 3 of 3: regulator countersigns the handover. Only now does custody move.
-    function approveTransfer(string calldata batchId) external onlyRole(Role.Regulator) batchExists(batchId) {
+    function approveTransfer(string calldata batchId)
+        external
+        whenNotPaused
+        onlyRole(Role.Regulator)
+        batchExists(batchId)
+    {
         bytes32 k = _key(batchId);
         Batch storage b = batches[k];
 
@@ -267,6 +320,12 @@ contract MedChain {
 
     function totalBatches() external view returns (uint256) {
         return allBatchKeys.length;
+    }
+
+    /// Batch ID by creation order (0 = first), so apps can list every batch without scanning events.
+    function batchIdAt(uint256 index) external view returns (string memory) {
+        require(index < allBatchKeys.length, "Index out of range");
+        return batches[allBatchKeys[index]].batchId;
     }
 
     // ───────────────────────── Internal ─────────────────────────
