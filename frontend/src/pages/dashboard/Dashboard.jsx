@@ -1,8 +1,9 @@
 import { useCallback, useRef, useState } from "react";
-import { Button, Card, Spinner } from "../../components/ui";
+import { Alert, Button, Card, Spinner } from "../../components/ui";
 import BatchLookup from "./BatchLookup.jsx";
-import { CONTRACT_READY, ROLE } from "./chain";
+import { DEMO_MODE, ROLE } from "./chain";
 import CreateBatch from "./CreateBatch.jsx";
+import { DEMO_ACCOUNTS } from "./demo";
 import MyBatches from "./MyBatches.jsx";
 import ParticipantLookup from "./ParticipantLookup.jsx";
 import RecallCard from "./RecallCard.jsx";
@@ -10,17 +11,6 @@ import RecallList from "./RecallList.jsx";
 import RegisterParticipant from "./RegisterParticipant.jsx";
 import TransferCard from "./TransferCard.jsx";
 import { useWallet } from "./WalletContext";
-
-function NoContract() {
-  return (
-    <Card title="Contract not connected">
-      <p className="muted">
-        MediChain isn't pointed at a deployed contract yet. Set <code>VITE_CONTRACT_ADDRESS</code>{" "}
-        in <code>frontend/.env</code> (or the repo variable for GitHub Pages) to the deployed address.
-      </p>
-    </Card>
-  );
-}
 
 function NotRegistered({ account, deactivated }) {
   const [copied, setCopied] = useState(false);
@@ -48,30 +38,13 @@ function NotRegistered({ account, deactivated }) {
   );
 }
 
-// Shows each panel only to the role allowed to use it; the contract enforces the same
-// rules, so hiding a panel is about clarity, not security.
-export default function Dashboard() {
-  const { account, participant, isAdmin, loadingRole, connecting, connect } = useWallet();
+// The panels for one account. Each panel shows only to the role allowed to use it; the
+// contract enforces the same rules, so hiding a panel is about clarity, not security.
+function DashboardPanels({ account, participant, isAdmin }) {
   const [version, setVersion] = useState(0); // bump to make lists reload after a transaction
   const [sendTarget, setSendTarget] = useState({ id: "", n: 0 });
   const transferRef = useRef(null);
   const changed = useCallback(() => setVersion((v) => v + 1), []);
-
-  if (!CONTRACT_READY) return <NoContract />;
-
-  if (!account) {
-    return (
-      <section className="panel center">
-        <h1>Connect your wallet</h1>
-        <p className="muted">Your dashboard depends on the role registered for your address.</p>
-        <Button onClick={connect} loading={connecting}>
-          {connecting ? "Connecting…" : "Connect wallet"}
-        </Button>
-      </section>
-    );
-  }
-
-  if (loadingRole) return <Spinner label="Loading your role…" />;
 
   const { role, active } = participant;
   const isHolder = active && role >= 1 && role <= 3; // can hold custody of batches
@@ -132,4 +105,63 @@ export default function Dashboard() {
       {isRegulator && <RecallList version={version} onRefresh={changed} />}
     </div>
   );
+}
+
+// Real dashboard: the role comes from the connected wallet.
+function LiveDashboard() {
+  const { account, participant, isAdmin, loadingRole, connecting, connect } = useWallet();
+
+  if (!account) {
+    return (
+      <section className="panel center">
+        <h1>Connect your wallet</h1>
+        <p className="muted">Your dashboard depends on the role registered for your address.</p>
+        <Button onClick={connect} loading={connecting}>
+          {connecting ? "Connecting…" : "Connect wallet"}
+        </Button>
+      </section>
+    );
+  }
+  if (loadingRole) return <Spinner label="Loading your role…" />;
+  return <DashboardPanels account={account} participant={participant} isAdmin={isAdmin} />;
+}
+
+// Preview before the contract is deployed: pick a sample company and see its dashboard.
+function PreviewDashboard() {
+  const [roleKey, setRoleKey] = useState("manufacturer");
+  const who = DEMO_ACCOUNTS[roleKey];
+
+  return (
+    <div className="dashboard">
+      <Alert type="info" title="Preview with sample data">
+        Choose a role to see that company's dashboard. Buttons that write to the blockchain are
+        switched on once the MediChain contract is live on Polygon Amoy.
+      </Alert>
+      <div className="role-tabs" role="tablist" aria-label="Preview as">
+        {Object.entries(DEMO_ACCOUNTS).map(([key, acc]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={key === roleKey}
+            className={`role-tab role-${acc.participant.role}${key === roleKey ? " selected" : ""}`}
+            onClick={() => setRoleKey(key)}
+          >
+            {acc.label}
+          </button>
+        ))}
+      </div>
+      {/* key: switching role starts that dashboard fresh */}
+      <DashboardPanels
+        key={roleKey}
+        account={who.address}
+        participant={who.participant}
+        isAdmin={roleKey === "regulator"}
+      />
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  return DEMO_MODE ? <PreviewDashboard /> : <LiveDashboard />;
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ZeroAddress } from "ethers";
 import { Alert, Badge, Card, Spinner, StatusBadge } from "../../components/ui";
-import { CONTRACT_READY } from "./chain";
+import { DEMO_MODE } from "./chain";
 import { fetchBatch, fetchParticipants, rememberBatch } from "./data";
 import { friendlyError } from "./errors";
 import { addressUrl, formatDate, formatDateTime, sameAddress, shortAddress } from "./format";
@@ -17,9 +17,14 @@ function Person({ address, people }) {
   return (
     <span className="person">
       {name && <strong>{name}</strong>}
-      <a href={addressUrl(address)} target="_blank" rel="noreferrer" className="mono">
-        {shortAddress(address)}
-      </a>
+      {DEMO_MODE ? (
+        // sample addresses don't exist on the explorer, so no link
+        <span className="mono small muted">{shortAddress(address)}</span>
+      ) : (
+        <a href={addressUrl(address)} target="_blank" rel="noreferrer" className="mono">
+          {shortAddress(address)}
+        </a>
+      )}
     </span>
   );
 }
@@ -42,7 +47,6 @@ export default function BatchDetail() {
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => {
-    if (!CONTRACT_READY) return;
     let cancelled = false;
     setState((s) => ({ ...s, loading: true, error: "" }));
     (async () => {
@@ -73,14 +77,6 @@ export default function BatchDetail() {
     </Link>
   );
 
-  if (!CONTRACT_READY) {
-    return (
-      <>
-        {back}
-        <Alert type="info">The contract address isn't set yet, so batches can't be loaded.</Alert>
-      </>
-    );
-  }
   if (state.loading && !state.batch) return <Spinner label="Loading batch from the blockchain…" />;
   if (state.error) {
     return (

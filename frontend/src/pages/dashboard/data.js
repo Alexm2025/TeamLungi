@@ -1,20 +1,33 @@
 // Read helpers for the dashboard: turn contract structs into plain objects and
 // work out which batches belong to an account.
 import { ZeroAddress, ZeroHash, id as hashText } from "ethers";
-import { CONTRACT_ADDRESS, DEPLOY_BLOCK, getContract, getProvider } from "./chain";
+import { getRecalledBatches } from "../../lib/recall";
+import {
+  CONTRACT_ADDRESS,
+  DEMO_MODE,
+  DEPLOY_BLOCK,
+  getContract,
+  getProvider,
+  getReadContract,
+} from "./chain";
+import { DEMO_ACCOUNTS, DEMO_BATCH_IDS } from "./demo";
 import { sameAddress } from "./format";
 
 // ---------- converting contract results ----------
 
 // ethers returns structs as array-like Results with BigInt numbers; the UI wants plain values.
+// Fields are read by name, falling back to position (the preview's sample data uses plain arrays).
 export function toParticipant(p) {
   return {
-    role: Number(p.role),
-    name: p.name,
-    location: p.location,
-    active: Boolean(p.active),
+    role: Number(p.role ?? p[0]),
+    name: p.name ?? p[1],
+    location: p.location ?? p[2],
+    active: Boolean(p.active ?? p[3]),
   };
 }
+
+const demoAccount = (address) =>
+  Object.values(DEMO_ACCOUNTS).find((a) => sameAddress(a.address, address));
 
 export function toBatch(b) {
   return {
@@ -33,17 +46,20 @@ export function toBatch(b) {
 }
 
 export async function fetchParticipants(addresses) {
-  const c = await getContract();
+  const c = await getReadContract();
   const unique = [...new Set(addresses.map((a) => a.toLowerCase()))];
   const entries = await Promise.all(
-    unique.map(async (a) => [a, toParticipant(await c.participants(a))])
+    unique.map(async (a) => {
+      const sample = DEMO_MODE && demoAccount(a);
+      return [a, sample ? sample.participant : toParticipant(await c.participants(a))];
+    })
   );
   return Object.fromEntries(entries); // keyed by lower-case address
 }
 
 // Batch details + custody history + recall reason, for the detail page.
 export async function fetchBatch(batchId) {
-  const c = await getContract();
+  const c = await getReadContract();
   const [raw, history] = await Promise.all([c.getBatch(batchId), c.getHistory(batchId)]);
   const batch = toBatch(raw);
   // The contract keys its mappings by keccak256(batchId); ethers' id() computes exactly that
@@ -127,8 +143,32 @@ async function batchIdsFromEvents(account) {
   return ids;
 }
 
+const newestFirst = (a, b) => b.createdAt - a.createdAt;
+
+// Preview mode: the sample batches this sample account appears in anywhere along the way.
+async function loadDemoBatches(account) {
+  const c = await getReadContract();
+  const rows = await Promise.all(
+    DEMO_BATCH_IDS.map(async (id) => ({
+      batch: toBatch(await c.getBatch(id)),
+      history: await c.getHistory(id),
+    }))
+  );
+  const batches = rows
+    .filter(
+      ({ batch, history }) =>
+        sameAddress(batch.manufacturer, account) ||
+        sameAddress(batch.currentOwner, account) ||
+        history.some((h) => sameAddress(h.from, account) || sameAddress(h.to, account))
+    )
+    .map((r) => r.batch)
+    .sort(newestFirst);
+  return { batches, eventsFailed: false };
+}
+
 // Batches this account made, holds, is about to receive, or has passed on; newest first.
 export async function loadMyBatches(account) {
+  if (DEMO_MODE) return loadDemoBatches(account);
   let fromEvents = new Set();
   let eventsFailed = false;
   try {
@@ -138,7 +178,7 @@ export async function loadMyBatches(account) {
     eventsFailed = true;
   }
 
-  const c = await getContract();
+  const c = await getReadContract();
   const ids = [...new Set([...fromEvents, ...knownBatchIds()])];
   const results = await Promise.allSettled(ids.map((batchId) => c.getBatch(batchId)));
   const batches = results
@@ -153,6 +193,26 @@ export async function loadMyBatches(account) {
         sameAddress(b.currentOwner, account) ||
         sameAddress(b.pendingReceiver, account)
     )
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .sort(newestFirst);
   return { batches, eventsFailed };
+}
+
+// Every recall, newest first: [{ batchId, reason, by, timestamp, txHash }].
+// Live: Member A's getRecalledBatches() (from events). Preview: the recalled sample batches,
+// which have no transaction behind them, so timestamp and txHash are empty.
+export async function loadRecalls() {
+  if (!DEMO_MODE) return getRecalledBatches();
+  const c = await getReadContract();
+  const recalled = [];
+  for (const id of DEMO_BATCH_IDS) {
+    if (toBatch(await c.getBatch(id)).status !== 4) continue;
+    recalled.push({
+      batchId: id,
+      reason: await c.recallReason(hashText(id)),
+      by: DEMO_ACCOUNTS.regulator.address,
+      timestamp: null,
+      txHash: null,
+    });
+  }
+  return recalled;
 }

@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card, Spinner, Table } from "../../components/ui";
-import { getRecalledBatches } from "../../lib/recall";
-import { CHAIN_ID, DEPLOY_BLOCK } from "./chain";
+import { CHAIN_ID, DEMO_MODE, DEPLOY_BLOCK } from "./chain";
+import { loadRecalls } from "./data";
 import { friendlyError } from "./errors";
 import { formatDateTime, shortAddress, txUrl } from "./format";
 
 // Without a deploy block, the search would start at block 0. That's fine on a local
 // Hardhat chain but means millions of blocks on Amoy, so we skip it there.
-const CAN_SEARCH = DEPLOY_BLOCK > 0 || CHAIN_ID === 31337;
+// (Preview mode reads sample data, so there is nothing to search.)
+const CAN_SEARCH = DEMO_MODE || DEPLOY_BLOCK > 0 || CHAIN_ID === 31337;
 
 const COLUMNS = [
   {
@@ -25,11 +26,14 @@ const COLUMNS = [
   {
     key: "timestamp",
     header: "When",
-    render: (r) => (
-      <a href={txUrl(r.txHash)} target="_blank" rel="noreferrer">
-        {formatDateTime(r.timestamp)}
-      </a>
-    ),
+    render: (r) =>
+      r.txHash ? (
+        <a href={txUrl(r.txHash)} target="_blank" rel="noreferrer">
+          {formatDateTime(r.timestamp)}
+        </a>
+      ) : (
+        "Sample data"
+      ),
   },
 ];
 
@@ -41,7 +45,7 @@ export default function RecallList({ version, onRefresh }) {
     if (!CAN_SEARCH) return;
     let cancelled = false;
     setState((s) => ({ ...s, loading: true, error: "" }));
-    getRecalledBatches()
+    loadRecalls()
       .then((rows) => !cancelled && setState({ loading: false, rows, error: "" }))
       .catch((err) => !cancelled && setState({ loading: false, rows: [], error: friendlyError(err) }));
     return () => {
@@ -70,7 +74,7 @@ export default function RecallList({ version, onRefresh }) {
       ) : state.error ? (
         <Alert type="error">{state.error}</Alert>
       ) : (
-        <Table columns={COLUMNS} rows={state.rows} rowKey={(r) => r.txHash} empty="No batches have been recalled." />
+        <Table columns={COLUMNS} rows={state.rows} rowKey={(r) => r.txHash ?? r.batchId} empty="No batches have been recalled." />
       )}
     </Card>
   );

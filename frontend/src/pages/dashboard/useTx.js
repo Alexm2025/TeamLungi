@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useToast } from "../../components/ui";
-import { getContract } from "./chain";
+import { DEMO_MODE, getContract } from "./chain";
 import { friendlyError } from "./errors";
 import { txUrl } from "./format";
 
@@ -15,6 +15,14 @@ export function useTx() {
 
   const run = useCallback(
     async (title, send) => {
+      // Preview mode has no contract to write to, so say so instead of failing.
+      if (DEMO_MODE) {
+        toast.info(
+          "This is a preview with sample data. Actions are enabled once the MediChain contract is live on Polygon Amoy.",
+          { title }
+        );
+        return null;
+      }
       setBusy(true);
       const id = toast.pending("Confirm the transaction in MetaMask…", { title });
       try {
