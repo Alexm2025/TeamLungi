@@ -4,6 +4,7 @@ import { keccak256, toUtf8Bytes, ZeroAddress } from "ethers";
 import { ROLE, STATUS } from "../../lib/contract";
 import { getContract, USING_MOCK } from "./contractSource";
 import QRScanner from "../../components/qr/QRScanner";
+import LabReportCheck from "./LabReportCheck";
 import "./verify.css";
 
 const VERDICTS = {
@@ -153,6 +154,8 @@ export default function VerifyPage() {
               </dl>
             </section>
           )}
+
+          {result.details && <LabReportCheck key={batchId} batchId={batchId} />}
 
           {result.timeline?.length > 0 && (
             <section className="verify-card">

@@ -17,6 +17,18 @@ const PARTICIPANTS = {
   [PHARM]: [3n, "CityCare Pharmacy", "Bengaluru, IN", true],
 };
 
+// Exact contents of docs/sample-lab-report-PCM-2026-001.txt. Dropping that file on the
+// verify page for PCM-2026-001 shows "Authentic"; editing even one character makes it fail.
+const SAMPLE_REPORT =
+  "MediChain demo lab report\nBatch: PCM-2026-001\nDrug: Paracetamol 500mg\n" +
+  "Manufacturer: Sunrise Pharma Ltd\nAssay: 99.2% (spec 95-105%)\nDissolution: pass\n" +
+  "Microbial limits: pass\nResult: RELEASED\n";
+
+const DOC_HASHES = {
+  "PCM-2026-001": keccak256(toUtf8Bytes(SAMPLE_REPORT)),
+  "AMX-2026-014": keccak256(toUtf8Bytes("a report you don't have")),
+};
+
 // Real contract returns BigInt for uint256, so the mock does too.
 function batch(id, drugName, mfgDaysAgo, expiryDaysFromNow, quantity, owner, status) {
   return {
@@ -26,7 +38,7 @@ function batch(id, drugName, mfgDaysAgo, expiryDaysFromNow, quantity, owner, sta
     mfgDate: BigInt(now - mfgDaysAgo * DAY),
     expiryDate: BigInt(now + expiryDaysFromNow * DAY),
     quantity: BigInt(quantity),
-    docHash: "0x" + "0".repeat(64),
+    docHash: DOC_HASHES[id] ?? "0x" + "0".repeat(64), // zero hash = no report registered
     currentOwner: owner,
     pendingReceiver: ZERO,
     status: BigInt(status),

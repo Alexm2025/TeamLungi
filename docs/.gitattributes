@@ -1,0 +1,2 @@
+# Keep the demo report byte-identical on every OS so its on-chain hash matches.
+*.txt -text

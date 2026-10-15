@@ -1,0 +1,8 @@
+MediChain demo lab report
+Batch: PCM-2026-001
+Drug: Paracetamol 500mg
+Manufacturer: Sunrise Pharma Ltd
+Assay: 99.2% (spec 95-105%)
+Dissolution: pass
+Microbial limits: pass
+Result: RELEASED

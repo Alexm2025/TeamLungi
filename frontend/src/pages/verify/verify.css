@@ -105,6 +105,41 @@
   font-weight: 500;
 }
 
+.lab-drop {
+  padding: 28px 16px;
+  border: 2px dashed #9ca3af;
+  border-radius: 12px;
+  text-align: center;
+  color: #555;
+  cursor: pointer;
+}
+
+.lab-drop-active {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.lab-result {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0 0;
+  font-weight: 600;
+}
+
+.lab-result span {
+  font-weight: 400;
+  font-size: 14px;
+  color: #555;
+}
+
+.lab-match { color: #15803d; }
+.lab-mismatch { color: #b91c1c; }
+
+.lab-none {
+  color: #555;
+  margin: 0;
+}
+
 .timeline {
   list-style: none;
   padding: 0 0 0 18px;
