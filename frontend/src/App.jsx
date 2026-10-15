@@ -1,24 +1,11 @@
-import { Link, Route, Routes, useParams } from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
 import { Navbar, ToastProvider } from "./components/ui";
 import BatchDetail from "./pages/dashboard/BatchDetail.jsx";
 import Dashboard from "./pages/dashboard/Dashboard.jsx";
 import Home from "./pages/dashboard/Home.jsx";
 import WalletButton from "./pages/dashboard/WalletButton.jsx";
 import { WalletProvider } from "./pages/dashboard/WalletContext.jsx";
-
-// TEMPORARY until Member C's page is on main. Then delete this function and use:
-// import VerifyPage from "./pages/verify/VerifyPage.jsx";
-function VerifyPage() {
-  const { batchId } = useParams();
-  return (
-    <section className="panel">
-      <h1>Verify a batch</h1>
-      <p className="muted">
-        {batchId ? `Batch "${batchId}": ` : ""}the verification page is being built by Member C.
-      </p>
-    </section>
-  );
-}
+import VerifyPage from "./pages/verify/VerifyPage.jsx";
 
 function NotFound() {
   return (
