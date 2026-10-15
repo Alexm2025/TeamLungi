@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card, Spinner } from "../../components/ui";
 import ApprovalQueue from "../../components/ledger/ApprovalQueue.jsx";
@@ -46,6 +46,11 @@ function DashboardPanels({ account, participant, isAdmin }) {
   const [sendTarget, setSendTarget] = useState({ id: "", n: 0 });
   const transferRef = useRef(null);
   const changed = useCallback(() => setVersion((v) => v + 1), []);
+  // The assistant signals when it changed something on-chain, so lists refresh by themselves.
+  useEffect(() => {
+    window.addEventListener("medichain:changed", changed);
+    return () => window.removeEventListener("medichain:changed", changed);
+  }, [changed]);
 
   const { role, active } = participant;
   const isHolder = active && role >= 1 && role <= 3; // can hold custody of batches
