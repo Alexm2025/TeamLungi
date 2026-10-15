@@ -1,5 +1,5 @@
 import { Button } from "../../components/ui";
-import { ROLE } from "./chain";
+import { DEMO_MODE, ROLE } from "./chain";
 import { shortAddress } from "./format";
 import { useWallet } from "./WalletContext";
 
@@ -26,7 +26,11 @@ export default function WalletButton() {
   return (
     <div className="wallet" title={error || account}>
       <span className={`role-pill role-${participant.role}`}>
-        {loadingRole ? "Loading role…" : roleLabel(participant, isAdmin)}
+        {DEMO_MODE
+          ? "Preview mode"
+          : loadingRole
+            ? "Loading role…"
+            : roleLabel(participant, isAdmin)}
       </span>
       <span className="wallet-address">{shortAddress(account)}</span>
       {error && <span className="wallet-error">{error}</span>}
