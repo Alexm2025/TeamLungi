@@ -1,32 +1,25 @@
 // Chooses where the verify page reads batches from.
 // Until Member A deploys and VITE_CONTRACT_ADDRESS is set, the real wrapper points at
 // the zero address, so we fall back to demo data instead of showing a network error.
-import { keccak256, ZeroAddress, ZeroHash } from "ethers";
-import * as lib from "../../lib/contract";
+import { ZeroAddress } from "ethers";
+import { CONTRACT_ADDRESS, getContract as getRealContract } from "../../lib/contract";
+import { hashFile, NO_DOCUMENT, verifyDocument as verifyOnChain } from "../../lib/document";
 import { getContract as getMockContract } from "./mockContract";
 
-export const USING_MOCK = lib.CONTRACT_ADDRESS === ZeroAddress;
+export const USING_MOCK = CONTRACT_ADDRESS === ZeroAddress;
 
-export const getContract = USING_MOCK ? getMockContract : () => lib.getContract();
+export const getContract = USING_MOCK ? getMockContract : () => getRealContract();
 
-// Lab-report checks. If Member A's lib provides verifyDocument / hasDocument we use those;
-// otherwise these local versions do the same thing against the batch's on-chain docHash.
-async function localHasDocument(batchId) {
+// Lab-report checks use Member A's SHA-256 helpers, the same ones the dashboard's
+// Create batch form uses, so a certificate uploaded there verifies here.
+export async function hasDocument(batchId) {
   const batch = await (await getContract()).getBatch(batchId);
-  return batch.docHash !== ZeroHash;
+  return batch.docHash !== NO_DOCUMENT;
 }
 
-// Hash the file's raw bytes in the browser and compare with the hash stored on-chain.
-// The file itself never leaves the user's device.
-async function localVerifyDocument(batchId, file) {
-  const bytes = new Uint8Array(await file.arrayBuffer());
+// The file is hashed in the browser and never uploaded anywhere.
+export async function verifyDocument(batchId, file) {
+  if (!USING_MOCK) return (await verifyOnChain(batchId, file)).matches;
   const batch = await (await getContract()).getBatch(batchId);
-  return keccak256(bytes) === batch.docHash;
+  return (await hashFile(file)).toLowerCase() === batch.docHash.toLowerCase();
 }
-
-// Copy into a plain object so the bundler doesn't warn while these exports don't exist yet.
-const libFns = { ...lib };
-const useLib = !USING_MOCK && typeof libFns.verifyDocument === "function";
-
-export const hasDocument = useLib && libFns.hasDocument ? libFns.hasDocument : localHasDocument;
-export const verifyDocument = useLib ? libFns.verifyDocument : localVerifyDocument;

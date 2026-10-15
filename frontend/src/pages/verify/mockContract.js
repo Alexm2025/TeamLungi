@@ -1,6 +1,6 @@
 // Demo stand-in for the deployed MedChain contract (read calls only).
 // contractSource.js uses it only while no contract address is configured.
-import { keccak256, toUtf8Bytes } from "ethers";
+import { keccak256, sha256, toUtf8Bytes } from "ethers";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const MFR = "0x1111111111111111111111111111111111111111";
@@ -25,8 +25,8 @@ const SAMPLE_REPORT =
   "Microbial limits: pass\nResult: RELEASED\n";
 
 const DOC_HASHES = {
-  "PCM-2026-001": keccak256(toUtf8Bytes(SAMPLE_REPORT)),
-  "AMX-2026-014": keccak256(toUtf8Bytes("a report you don't have")),
+  "PCM-2026-001": sha256(toUtf8Bytes(SAMPLE_REPORT)),
+  "AMX-2026-014": sha256(toUtf8Bytes("a report you don't have")),
 };
 
 // Real contract returns BigInt for uint256, so the mock does too.
