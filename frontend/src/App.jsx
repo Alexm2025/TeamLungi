@@ -5,6 +5,7 @@ import Dashboard from "./pages/dashboard/Dashboard.jsx";
 import Home from "./pages/dashboard/Home.jsx";
 import WalletButton from "./pages/dashboard/WalletButton.jsx";
 import { WalletProvider } from "./pages/dashboard/WalletContext.jsx";
+import DemoTour from "./components/tour/DemoTour.jsx";
 import LedgerPage from "./pages/ledger/LedgerPage.jsx";
 import VerifyPage from "./pages/verify/VerifyPage.jsx";
 
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
+        <DemoTour />
       </WalletProvider>
     </ToastProvider>
   );

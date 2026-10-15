@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Card, Spinner } from "../../components/ui";
 import ApprovalQueue from "../../components/ledger/ApprovalQueue.jsx";
 import { CONTRACT_READY, NETWORK, ROLE } from "./chain";
+import AdminControls from "./AdminControls.jsx";
 import CreateBatch from "./CreateBatch.jsx";
 import MyBatches from "./MyBatches.jsx";
 import ParticipantLookup from "./ParticipantLookup.jsx";
@@ -103,6 +104,7 @@ function DashboardPanels({ account, participant, isAdmin }) {
       </div>
 
       {isRegulator && <ApprovalQueue key={version} />}
+      {isAdmin && <AdminControls />}
       {isRegulator && <RecallList version={version} onRefresh={changed} />}
     </div>
   );

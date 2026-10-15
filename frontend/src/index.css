@@ -794,3 +794,10 @@ code {
   margin-right: 4px;
   vertical-align: middle;
 }
+
+/* Admin controls */
+.admin-h { font-size: 1rem; margin: 16px 0 4px; }
+.admin-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 8px; }
+.admin-row .field { flex: 1; min-width: 220px; margin: 0; }
+/* keep page content clear of the tour callout */
+.container { padding-bottom: 120px; }
