@@ -10,7 +10,8 @@ export default function WalletButton() {
   const navigate = useNavigate();
   if (!signedIn) return null;
 
-  const role = loadingRole ? "…" : ROLE[participant.role] ?? "Unknown";
+  const roleName = ROLE[participant.role] ?? "Unknown";
+  const role = loadingRole ? "…" : participant.active ? roleName : `${roleName} (deactivated)`;
   const logOut = async () => {
     await signOut();
     navigate("/");

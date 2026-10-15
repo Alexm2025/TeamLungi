@@ -5,9 +5,11 @@ import { ROLE } from "./chain";
 import { fetchParticipants } from "./data";
 import { friendlyError } from "./errors";
 import { useTx } from "./useTx";
+import { useWallet } from "./WalletContext";
 
 // Admin / Regulator: check what role an address has. The admin can also deactivate it.
 export default function ParticipantLookup({ canDeactivate }) {
+  const { account } = useWallet();
   const [address, setAddress] = useState("");
   const [result, setResult] = useState(null); // { address, role, name, location, active }
   const [error, setError] = useState("");
@@ -75,10 +77,14 @@ export default function ParticipantLookup({ canDeactivate }) {
         </dl>
       )}
 
-      {result?.active && canDeactivate && (
+      {/* The admin deactivating its own wallet would switch off the regulator, so it isn't offered. */}
+      {result?.active && canDeactivate && result.address.toLowerCase() !== account?.toLowerCase() && (
         <Button variant="danger" size="sm" onClick={deactivate} loading={busy}>
           Deactivate
         </Button>
+      )}
+      {result?.active && canDeactivate && result.address.toLowerCase() === account?.toLowerCase() && (
+        <p className="muted">This is your own admin wallet; it can't be deactivated from here.</p>
       )}
     </Card>
   );
