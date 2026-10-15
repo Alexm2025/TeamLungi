@@ -1,0 +1,58 @@
+.qr-label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+}
+
+.qr-label-id {
+  margin: 8px 0 0;
+  font-weight: 700;
+}
+
+.qr-label-drug {
+  margin: 0;
+  color: #555;
+}
+
+.qr-label-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.qr-label-actions button,
+.qr-scanner button {
+  padding: 8px 14px;
+  border: 1px solid #1d4ed8;
+  border-radius: 8px;
+  background: #fff;
+  color: #1d4ed8;
+  cursor: pointer;
+}
+
+.qr-scanner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.qr-scanner-view {
+  width: 100%;
+  max-width: 360px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.qr-scanner-error {
+  color: #b91c1c;
+  text-align: center;
+}

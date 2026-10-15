@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { keccak256, toUtf8Bytes, ZeroAddress } from "ethers";
 import { getContract } from "./contractSource";
+import QRScanner from "../../components/qr/QRScanner";
 import "./verify.css";
 
 const STATUS_LABELS = ["Created", "In transit", "At distributor", "At pharmacy", "Recalled"];
@@ -73,6 +74,8 @@ export default function VerifyPage() {
   const navigate = useNavigate();
   const [input, setInput] = useState(batchId ?? "");
   const [state, setState] = useState({ loading: false, error: "", result: null });
+  const [scanning, setScanning] = useState(false);
+  const closeScanner = useCallback(() => setScanning(false), []);
 
   // The URL is the source of truth: searching navigates, and this effect loads.
   // That way a scanned QR link and a typed ID behave exactly the same.
@@ -116,7 +119,12 @@ export default function VerifyPage() {
         <button type="submit" disabled={loading || !input.trim()}>
           {loading ? "Checking…" : "Verify"}
         </button>
+        <button type="button" onClick={() => setScanning((s) => !s)}>
+          {scanning ? "Close scanner" : "Scan QR"}
+        </button>
       </form>
+
+      {scanning && <QRScanner onClose={closeScanner} />}
 
       {error && <p className="verify-error">{error}</p>}
 
