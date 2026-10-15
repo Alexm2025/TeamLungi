@@ -24,6 +24,10 @@ export const EVENT_TONE = {
   TransferRejected: "red",
   TransferCancelled: "neutral",
   BatchRecalled: "red",
+  AdminTransferStarted: "purple",
+  AdminTransferred: "purple",
+  Paused: "red",
+  Unpaused: "green",
 };
 
 export const EVENT_TYPES = Object.keys(EVENT_TONE);
