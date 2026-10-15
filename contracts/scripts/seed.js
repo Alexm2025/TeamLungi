@@ -50,6 +50,21 @@ async function main() {
     console.log(`+ Registered ${p.name} as role ${p.role} (${p.address})`);
   }
 
+  // Optional: send each demo wallet some gas money (FUND_DEMO_WALLETS=0.002 in .env) so they can sign right away.
+  const fundAmount = process.env.FUND_DEMO_WALLETS;
+  if (!isLocal && fundAmount) {
+    const value = ethers.parseEther(fundAmount);
+    for (const p of accounts) {
+      const balance = await ethers.provider.getBalance(p.address);
+      if (balance >= value) {
+        console.log(`= ${p.name} already has ${ethers.formatEther(balance)}`);
+        continue;
+      }
+      await (await admin.sendTransaction({ to: p.address, value: value - balance })).wait();
+      console.log(`+ Topped up ${p.name} to ${fundAmount}`);
+    }
+  }
+
   if (isLocal) await seedLocalBatches(medChain, signers);
   console.log("\nDone.");
 }
