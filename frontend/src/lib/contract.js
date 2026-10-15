@@ -14,27 +14,43 @@ export const ABI = MedChainABI;
 // so the activity feed doesn't scan the whole chain.
 export const DEPLOY_BLOCK = Number(import.meta.env.VITE_DEPLOY_BLOCK || 0);
 
-// Polygon Amoy testnet by default. Pointing VITE_RPC_URL at a local Hardhat node
-// (http://127.0.0.1:8545) switches everything, including MetaMask, to that chain instead.
-export const RPC_URL = import.meta.env.VITE_RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com";
-const IS_LOCAL = /localhost|127\.0\.0\.1/.test(RPC_URL);
+// Supported networks. VITE_CHAIN_ID picks one (default Polygon Amoy); pointing VITE_RPC_URL at a
+// local Hardhat node (http://127.0.0.1:8545) selects the local chain automatically.
+export const NETWORKS = {
+  31337: { name: "Hardhat Local", symbol: "ETH", rpc: "http://127.0.0.1:8545", explorer: null },
+  80002: {
+    name: "Polygon Amoy Testnet",
+    symbol: "POL",
+    rpc: "https://polygon-amoy-bor-rpc.publicnode.com",
+    explorer: "https://amoy.polygonscan.com",
+  },
+  11155111: {
+    name: "Ethereum Sepolia Testnet",
+    symbol: "ETH",
+    rpc: "https://ethereum-sepolia-rpc.publicnode.com",
+    explorer: "https://sepolia.etherscan.io",
+  },
+};
+
+const IS_LOCAL = /localhost|127\.0\.0\.1/.test(import.meta.env.VITE_RPC_URL || "");
 export const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID || (IS_LOCAL ? 31337 : 80002));
+export const NETWORK = NETWORKS[CHAIN_ID] ?? { name: `Chain ${CHAIN_ID}`, symbol: "ETH", rpc: "", explorer: null };
+export const RPC_URL = import.meta.env.VITE_RPC_URL || NETWORK.rpc;
+
+// Block explorer links (null on a local chain, which has no explorer).
+const explorerLink = (path) => (NETWORK.explorer ? `${NETWORK.explorer}/${path}` : null);
+export const txUrl = (hash) => explorerLink(`tx/${hash}`);
+export const addressUrl = (address) => explorerLink(`address/${address}`);
+export const blockUrl = (number) => explorerLink(`block/${number}`);
 
 // What MetaMask needs to add the network if the user doesn't have it yet.
-const NETWORK_PARAMS = IS_LOCAL
-  ? {
-      chainId: `0x${CHAIN_ID.toString(16)}`,
-      chainName: "Hardhat Local",
-      nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-      rpcUrls: [RPC_URL],
-    }
-  : {
-      chainId: `0x${CHAIN_ID.toString(16)}`, // 0x13882 for Amoy
-      chainName: "Polygon Amoy Testnet",
-      nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
-      rpcUrls: [RPC_URL],
-      blockExplorerUrls: ["https://amoy.polygonscan.com"],
-    };
+const NETWORK_PARAMS = {
+  chainId: `0x${CHAIN_ID.toString(16)}`,
+  chainName: NETWORK.name,
+  nativeCurrency: { name: NETWORK.symbol, symbol: NETWORK.symbol, decimals: 18 },
+  rpcUrls: [RPC_URL],
+  ...(NETWORK.explorer && { blockExplorerUrls: [NETWORK.explorer] }),
+};
 
 // True once a real contract address is configured; pages can show "Contract not connected" otherwise.
 export const isContractConfigured = () => !/^0x0{40}$/.test(CONTRACT_ADDRESS);
