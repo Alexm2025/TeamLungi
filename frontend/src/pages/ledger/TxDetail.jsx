@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Badge, Card, Spinner } from "../../components/ui";
+import BatchLink from "../../components/ledger/BatchLink.jsx";
 import HashLink from "../../components/ledger/HashLink.jsx";
 import { dateTime } from "../../components/ledger/format";
 import { getTransactionDetails } from "../../lib/ledger";
@@ -64,7 +65,7 @@ export default function TxDetail() {
             {Object.entries(tx.call.args).map(([k, v]) => (
               <div key={k}>
                 <dt>{k}</dt>
-                <dd className="mono-wrap">{String(v)}</dd>
+                <dd className="mono-wrap">{k === "batchId" ? <BatchLink id={String(v)} /> : String(v)}</dd>
               </div>
             ))}
           </dl>
@@ -82,7 +83,7 @@ export default function TxDetail() {
                 {Object.entries(e.args).map(([k, v]) => (
                   <div key={k}>
                     <dt>{k}</dt>
-                    <dd className="mono-wrap">{String(v)}</dd>
+                    <dd className="mono-wrap">{k === "batchId" ? <BatchLink id={String(v)} /> : String(v)}</dd>
                   </div>
                 ))}
               </dl>

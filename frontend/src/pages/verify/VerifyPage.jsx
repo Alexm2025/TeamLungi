@@ -90,6 +90,11 @@ export default function VerifyPage() {
     return () => window.removeEventListener("medichain:changed", bump);
   }, []);
 
+  // Arriving from a clicked batch ID elsewhere: start at the verdict, not halfway down the page.
+  useEffect(() => {
+    if (batchId) window.scrollTo({ top: 0 });
+  }, [batchId]);
+
   useEffect(() => {
     if (!batchId) return;
     setInput(batchId);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Button, Card, Input, Spinner, Table, useToast } from "../ui";
 import { approveTransfer, getPendingApprovals, rejectTransfer } from "../../lib/approvals";
 import { getContract } from "../../lib/contract";
+import BatchLink from "./BatchLink.jsx";
 import HashLink from "./HashLink.jsx";
 import "./ledger.css";
 
@@ -55,7 +56,7 @@ export default function ApprovalQueue() {
   };
 
   const columns = [
-    { key: "batch", header: "Batch", render: (r) => <strong>{r.batchId}</strong> },
+    { key: "batch", header: "Batch", render: (r) => <strong><BatchLink id={r.batchId} /></strong> },
     { key: "route", header: "Handover", render: (r) => `${r.fromName} → ${r.toName}` },
     {
       key: "proof",

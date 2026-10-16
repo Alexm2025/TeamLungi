@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { blockTimestamp } from "../../lib/activity";
 import { isContractConfigured } from "../../lib/contract";
 import { useWallet } from "../../pages/dashboard/WalletContext";
+import BatchLink from "../ledger/BatchLink.jsx";
 import { useToast } from "../ui";
 import { buildNotifications, headline } from "./compute";
 import "./notifications.css";
@@ -188,6 +189,9 @@ export function NotificationBell() {
                     <p>{i.detail}</p>
                     <div className="nt-meta">
                       {i.time && <span>{timeAgo(i.time)}</span>}
+                      {i.batchId && !i.href?.startsWith("/verify/") && (
+                        <BatchLink id={i.batchId} onClick={() => { n.markRead([i.id]); setOpen(false); }} />
+                      )}
                       {i.href && (
                         <Link to={i.href} onClick={() => { n.markRead([i.id]); setOpen(false); }}>
                           {i.cta ?? "Open"} →

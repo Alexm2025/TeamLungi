@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Badge, Card, Spinner } from "../../components/ui";
+import BatchLink from "../../components/ledger/BatchLink.jsx";
 import HashLink from "../../components/ledger/HashLink.jsx";
 import { EVENT_TONE, dateTime, short, timeAgo } from "../../components/ledger/format";
 import { getBlockDetails, getLedgerBlocks } from "../../lib/ledger";
@@ -41,9 +42,12 @@ export function BlocksView() {
                 <div className="block-row"><span>Parent hash</span><span className="mono">{short(b.parentHash, 12, 8)}</span></div>
                 <div className="block-events">
                   {b.events.map((e) => (
-                    <Link key={`${e.txHash}-${e.logIndex}`} to={`/ledger/tx/${e.txHash}`}>
-                      <Badge tone={EVENT_TONE[e.type]}>{e.label}{e.batchId ? ` · ${e.batchId}` : ""}</Badge>
-                    </Link>
+                    <span key={`${e.txHash}-${e.logIndex}`}>
+                      <Link to={`/ledger/tx/${e.txHash}`}>
+                        <Badge tone={EVENT_TONE[e.type]}>{e.label}</Badge>
+                      </Link>
+                      {e.batchId && <> <BatchLink id={e.batchId} /></>}
+                    </span>
                   ))}
                 </div>
                 <div className="muted small">{b.txCount} transaction(s) in this block in total</div>
@@ -104,7 +108,7 @@ export function BlockDetail() {
           <ul className="plain-list">
             {block.medchainEvents.map((e) => (
               <li key={`${e.txHash}-${e.logIndex}`}>
-                <Badge tone={EVENT_TONE[e.type]}>{e.label}</Badge> {e.batchId ?? e.name ?? ""} · <HashLink kind="tx" value={e.txHash} />
+                <Badge tone={EVENT_TONE[e.type]}>{e.label}</Badge> {e.batchId ? <BatchLink id={e.batchId} /> : e.name ?? ""} · <HashLink kind="tx" value={e.txHash} />
               </li>
             ))}
           </ul>
