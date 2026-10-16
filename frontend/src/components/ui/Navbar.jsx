@@ -1,4 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
+import logo from "../../assets/medichain-icon.svg";
 
 // Top bar: brand on the left, page links in the middle, anything passed as children on the right.
 export default function Navbar({ links, children }) {
@@ -6,7 +7,7 @@ export default function Navbar({ links, children }) {
     <header className="navbar">
       <div className="navbar-inner">
         <Link to="/" className="brand">
-          <span className="brand-mark" aria-hidden="true">✚</span>
+          <img src={logo} className="brand-logo" alt="" aria-hidden="true" />
           MediChain
         </Link>
         <nav className="nav-links">

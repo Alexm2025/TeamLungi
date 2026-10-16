@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="512" height="512">
+  <title>MediChain</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14A38B"/>
+      <stop offset="1" stop-color="#0B6B5C"/>
+    </linearGradient>
+  </defs>
+  <!-- Hexagon = a block on the chain -->
+  <path d="M60 8 L105 34 L105 86 L60 112 L15 86 L15 34 Z" fill="url(#bg)" stroke="url(#bg)" stroke-width="10" stroke-linejoin="round"/>
+  <!-- Medical cross made of two interlocking chain links -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round">
+    <rect x="24" y="47" width="72" height="26" rx="13"/>
+    <rect x="47" y="24" width="26" height="72" rx="13"/>
+  </g>
+  <!-- Re-draw the horizontal link over the vertical one at two crossings so the links weave -->
+  <g stroke-linecap="butt">
+    <line x1="64" y1="47" x2="82" y2="47" stroke="#0F8A76" stroke-width="15"/>
+    <line x1="38" y1="73" x2="56" y2="73" stroke="#10907B" stroke-width="15"/>
+    <line x1="62" y1="47" x2="84" y2="47" stroke="#FFFFFF" stroke-width="9"/>
+    <line x1="36" y1="73" x2="58" y2="73" stroke="#FFFFFF" stroke-width="9"/>
+  </g>
+</svg>
