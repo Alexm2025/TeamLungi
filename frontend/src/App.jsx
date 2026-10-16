@@ -4,10 +4,11 @@ import { CONTRACT_ADDRESS, CONTRACT_READY, NETWORK, addressUrl } from "./pages/d
 import Dashboard from "./pages/dashboard/Dashboard.jsx";
 import Home from "./pages/dashboard/Home.jsx";
 import WalletButton from "./pages/dashboard/WalletButton.jsx";
-import { WalletProvider } from "./pages/dashboard/WalletContext.jsx";
+import { WalletProvider, useWallet } from "./pages/dashboard/WalletContext.jsx";
 import Assistant from "./components/assistant/Assistant.jsx";
 import { AlertBar, NotificationBell, NotificationsProvider } from "./components/notifications/Notifications.jsx";
 import LedgerPage from "./pages/ledger/LedgerPage.jsx";
+import MyBatchesPage from "./pages/batches/MyBatchesPage.jsx";
 import VerifyPage from "./pages/verify/VerifyPage.jsx";
 
 // The old dashboard batch page was merged into Verify; keep links that were already shared working.
@@ -31,6 +32,20 @@ const NAV_LINKS = [
   { to: "/verify", label: "Verify" },
   { to: "/ledger", label: "Ledger" },
 ];
+
+// Menu links; "My batches" appears only for a signed-in manufacturer.
+function AppNavbar() {
+  const { signedIn, sessionRole } = useWallet();
+  const links = signedIn && sessionRole === "manufacturer"
+    ? [...NAV_LINKS.slice(0, 2), { to: "/batches", label: "My batches" }, ...NAV_LINKS.slice(2)]
+    : NAV_LINKS;
+  return (
+    <Navbar links={links}>
+      <NotificationBell />
+      <WalletButton />
+    </Navbar>
+  );
+}
 
 // Tells every visitor which network and contract the data comes from, with a link to check it.
 function NetworkBanner() {
@@ -57,10 +72,7 @@ export default function App() {
     <ToastProvider>
       <WalletProvider>
         <NotificationsProvider>
-        <Navbar links={NAV_LINKS}>
-          <NotificationBell />
-          <WalletButton />
-        </Navbar>
+        <AppNavbar />
         <NetworkBanner />
         <AlertBar />
         <main className="container">
@@ -71,6 +83,7 @@ export default function App() {
             <Route path="/verify" element={<VerifyPage />} />
             <Route path="/verify/:batchId" element={<VerifyPage />} />
             <Route path="/ledger/*" element={<LedgerPage />} />
+            <Route path="/batches" element={<MyBatchesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

@@ -465,6 +465,12 @@ export default function Assistant() {
       case "mybatches": {
         if (!wallet.signedIn) return askSignIn({ roles: ["manufacturer", "distributor", "pharmacy"], label: "Seeing your batches" });
         const list = await myBatches(wallet.account);
+        if (role === "manufacturer") {
+          // Manufacturers get the full My batches page, pre-searched when they name a batch.
+          const made = list.filter(({ b }) => b.manufacturer.toLowerCase() === wallet.account.toLowerCase()).length;
+          say(`You've created ${made} batch(es). Opening My batches, where you can search, filter and export them.`);
+          return go(entities.batchId ? `/batches?q=${encodeURIComponent(entities.batchId)}` : "/batches");
+        }
         if (!list.length) return say("You don't have any batches yet.", { chips: role === "manufacturer" ? ["Create a batch"] : [] });
         const lines = list.slice(0, 8).map(({ id, b }) => `${id}: ${STATUS[Number(b.status)]}`);
         say(`You have ${list.length} batch(es):\n${lines.join("\n")}`, { chips: list.slice(0, 6).map((x) => x.id) });
