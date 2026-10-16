@@ -246,6 +246,18 @@ export async function buildNotifications({ account, role, isAdmin }) {
     }
   }
 
+  // ── Needs action: the admin proposed this wallet as the new admin (step 2 of 2 is theirs) ──
+  if (!isAdmin && same(await c.pendingAdmin(), account)) {
+    items.push({
+      id: `accept-admin:${account}`,
+      severity: "action",
+      title: "You've been proposed as network admin",
+      detail: "The current admin wants to hand admin rights to this wallet. Nothing changes until you accept on your dashboard.",
+      href: "/dashboard",
+      cta: "Review",
+    });
+  }
+
   // ── System state ──
   if (await c.paused()) {
     items.push({

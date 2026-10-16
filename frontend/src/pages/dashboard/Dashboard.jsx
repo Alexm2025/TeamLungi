@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Alert, Button, Card, Spinner } from "../../components/ui";
 import ApprovalQueue from "../../components/ledger/ApprovalQueue.jsx";
 import { CONTRACT_READY, NETWORK, ROLE } from "./chain";
+import AcceptAdmin from "./AcceptAdmin.jsx";
 import AdminControls from "./AdminControls.jsx";
 import CreateBatch from "./CreateBatch.jsx";
 import MyBatches from "./MyBatches.jsx";
@@ -79,6 +80,7 @@ function DashboardPanels({ account, participant, isAdmin }) {
       </header>
 
       {!active && !isAdmin && <NotRegistered account={account} deactivated={role > 0} />}
+      {!isAdmin && <AcceptAdmin account={account} />}
 
       {isHolder && (
         <MyBatches
