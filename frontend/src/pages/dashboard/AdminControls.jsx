@@ -5,6 +5,9 @@ import { ROLE, getReadContract } from "./chain";
 import { friendlyError } from "./errors";
 import { shortAddress } from "./format";
 import { useTx } from "./useTx";
+import { useWallet } from "./WalletContext";
+
+const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
 // Admin powers, and their limits: pause/resume hand-offs in an emergency and hand admin rights to
 // another wallet in two steps. The admin can't edit or delete any record; recalls work while paused.
@@ -12,19 +15,21 @@ export default function AdminControls() {
   const [state, setState] = useState({ paused: null, pendingAdmin: null, pendingInfo: null, error: "" });
   const [newAdmin, setNewAdmin] = useState("");
   const { run, busy } = useTx();
+  const { account } = useWallet();
 
   const load = useCallback(async () => {
     try {
       const c = await getReadContract();
       const [paused, pendingAdmin] = await Promise.all([c.paused(), c.pendingAdmin()]);
-      const pending = pendingAdmin === ZeroAddress ? null : pendingAdmin;
+      // Proposing yourself is allowed by the contract but changes nothing, so it isn't a real handover.
+      const pending = pendingAdmin === ZeroAddress || same(pendingAdmin, account) ? null : pendingAdmin;
       // The proposed wallet accepts from its own dashboard, so it must be able to sign in with a role.
       const pendingInfo = pending ? await c.participants(pending) : null;
       setState({ paused, pendingAdmin: pending, pendingInfo, error: "" });
     } catch (err) {
       setState((s) => ({ ...s, error: friendlyError(err) }));
     }
-  }, []);
+  }, [account]);
 
   useEffect(() => {
     load();
@@ -46,7 +51,8 @@ export default function AdminControls() {
     }
   };
 
-  const validAddress = isAddress(newAdmin.trim());
+  const isSelf = same(newAdmin.trim(), account);
+  const validAddress = isAddress(newAdmin.trim()) && !isSelf;
 
   return (
     <Card
@@ -93,7 +99,7 @@ export default function AdminControls() {
           value={newAdmin}
           onChange={(e) => setNewAdmin(e.target.value)}
           placeholder="0x…"
-          error={newAdmin && !validAddress ? "Not a valid address" : ""}
+          error={isSelf ? "That's your own wallet. Enter the wallet that should become admin." : newAdmin && !validAddress ? "Not a valid address" : ""}
         />
         <Button type="submit" variant="secondary" loading={busy} disabled={!validAddress}>
           Propose
