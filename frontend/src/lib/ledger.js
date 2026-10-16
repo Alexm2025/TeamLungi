@@ -1,7 +1,7 @@
 // Public ledger / block explorer data. Everything here is read straight from the chain through the
 // public RPC: no backend, no database, so anyone can reproduce what the page shows.
 //
-//   const rows = await getLedger({ batchId, address, type });  // every transaction, newest first
+//   const rows = await getLedger({ batchId, address, type });  // every transaction, newest first (+ batch expiry)
 //   const tx = await getTransactionDetails(hash);               // receipt, signer, gas, decoded call + events
 //   const block = await getBlockDetails(number);                // header: hash, parent hash, miner, gas
 //   const blocks = await getLedgerBlocks();                     // blocks that hold MedChain txs, linked by hash
@@ -13,6 +13,7 @@ import { blockTimestamp, getAllEvents } from "./activity";
 const iface = new Interface(ABI);
 const txCache = new Map(); // hash -> transaction (immutable once mined, safe to cache forever)
 const blockCache = new Map(); // number -> block header
+const expiryCache = new Map(); // batchId -> expiry (unix seconds); the contract never changes it
 
 async function getTx(hash) {
   if (!txCache.has(hash)) txCache.set(hash, await getProvider().getTransaction(hash));
@@ -39,6 +40,24 @@ function decodeCall(tx) {
 
 const formatValue = (v) => (typeof v === "bigint" ? v.toString() : v);
 
+// Events don't carry the expiry date, so read it from the batch record once per batch.
+async function batchExpiries(ids) {
+  const missing = [...new Set(ids)].filter((id) => id && !expiryCache.has(id));
+  if (missing.length) {
+    const c = await getContract();
+    await Promise.all(
+      missing.map(async (id) => {
+        try {
+          expiryCache.set(id, Number((await c.getBatch(id)).expiryDate));
+        } catch {
+          expiryCache.set(id, null); // reverted: no such batch
+        }
+      })
+    );
+  }
+  return expiryCache;
+}
+
 /**
  * Every contract event as a ledger row, newest first, with the wallet that signed its transaction.
  * Filters: batchId, address (any party or signer), type (event name).
@@ -62,7 +81,9 @@ export async function getLedger({ batchId, address, type, limit = 500 } = {}) {
         [r.signer, r.from, r.to, r.by, r.account].some((a) => a && a.toLowerCase() === address.toLowerCase())
       )
     : withSigner;
-  return result.slice(0, limit);
+  const page = result.slice(0, limit);
+  const expiries = await batchExpiries(page.map((r) => r.batchId));
+  return page.map((r) => (r.batchId ? { ...r, expiryDate: expiries.get(r.batchId) ?? null } : r));
 }
 
 /** Full detail for one transaction: what was called, who signed, which block, what it cost, what it emitted. */
