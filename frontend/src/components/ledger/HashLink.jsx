@@ -13,11 +13,12 @@ export default function HashLink({ kind, value, full = false }) {
 
   return (
     <span className="hash-link">
-      <Link to={internal} className="mono" title={String(value)}>
+      {/* stopPropagation: inside a clickable table row, the link must win over the row */}
+      <Link to={internal} className="mono" title={String(value)} onClick={(e) => e.stopPropagation()}>
         {text}
       </Link>
       {external && (
-        <a href={external} target="_blank" rel="noreferrer" className="ext" title="Open in public block explorer">
+        <a href={external} target="_blank" rel="noreferrer" className="ext" title="Open in public block explorer" onClick={(e) => e.stopPropagation()}>
           ↗
         </a>
       )}

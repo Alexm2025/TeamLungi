@@ -6,6 +6,8 @@ import { CONTRACT_READY, getContract } from "./contractSource";
 import ThreeStepVerification from "../../components/ledger/ThreeStepVerification.jsx";
 import QRScanner from "../../components/qr/QRScanner";
 import LabReportCheck from "./LabReportCheck";
+import TransactionsView from "../ledger/TransactionsView.jsx";
+import "../../components/ledger/ledger.css";
 import "./verify.css";
 
 const VERDICTS = {
@@ -188,6 +190,12 @@ export default function VerifyPage() {
                 ))}
               </ol>
             </section>
+          )}
+
+          {result.details && (
+            <div className="verify-tx">
+              <TransactionsView key={batchId} batchId={batchId} compact />
+            </div>
           )}
         </>
       )}

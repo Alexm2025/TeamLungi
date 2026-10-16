@@ -171,3 +171,7 @@
   color: #555;
   font-size: 14px;
 }
+
+/* Batch transaction list at the bottom of the Verify page */
+.verify-tx { margin-top: 16px; }
+.verify-tx .table td { white-space: normal; overflow-wrap: anywhere; }

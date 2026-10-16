@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes, useParams } from "react-router-dom";
 import { Alert, Card } from "../../components/ui";
 import ApprovalQueue from "../../components/ledger/ApprovalQueue.jsx";
 import HashLink from "../../components/ledger/HashLink.jsx";
 import { isContractConfigured, NETWORK } from "../../lib/contract";
 import { getChainOverview } from "../../lib/ledger";
 import { BlockDetail, BlocksView } from "./BlocksView.jsx";
-import TrackBatch from "./TrackBatch.jsx";
 import TransactionsView from "./TransactionsView.jsx";
 import TxDetail from "./TxDetail.jsx";
 import "../../components/ledger/ledger.css";
@@ -14,7 +13,6 @@ import "../../components/ledger/ledger.css";
 const TABS = [
   { to: "/ledger", label: "Transactions", end: true },
   { to: "/ledger/blocks", label: "Blocks" },
-  { to: "/ledger/batch", label: "Track & verify" },
   { to: "/ledger/approvals", label: "Approvals" },
   { to: "/ledger/how", label: "How it's secured" },
 ];
@@ -56,7 +54,7 @@ function HowItWorks() {
     ["3 signatures per handover", "Sender initiates, receiver accepts, regulator approves. Custody only moves on the third signature, enforced by the smart contract itself."],
     ["Blocks are hash-linked", "Each block stores the hash of the block before it. Changing any past entry changes its block's hash and breaks every later link, so tampering is detectable by anyone."],
     ["Replicated, not stored by us", `The data lives on thousands of ${NETWORK.name} nodes. This site has no database; it reads the chain through a public RPC, and every page links to an independent explorer to cross-check.`],
-    ["3-layer verification in your browser", "Track & verify recomputes everything from raw chain data: the record, each hop's 3 signers, and the lab report's SHA-256 fingerprint."],
+    ["3-layer verification in your browser", "The Verify page recomputes everything from raw chain data: the record, each hop's 3 signers, and the lab report's SHA-256 fingerprint."],
     ["Rules enforced in code", "Role checks, allowed routes (manufacturer → distributor → pharmacy), recall locks and expiry are all checked by the contract, covered by 32 automated tests."],
   ];
   return (
@@ -71,6 +69,11 @@ function HowItWorks() {
       </ol>
     </Card>
   );
+}
+
+function ToVerify() {
+  const { batchId } = useParams();
+  return <Navigate to={`/verify/${encodeURIComponent(batchId)}`} replace />;
 }
 
 /** Public ledger and block explorer. Mounted by App.jsx at /ledger/*. */
@@ -109,8 +112,9 @@ export default function LedgerPage() {
         <Route path="blocks" element={<BlocksView />} />
         <Route path="block/:number" element={<BlockDetail />} />
         <Route path="tx/:hash" element={<TxDetail />} />
-        <Route path="batch" element={<TrackBatch />} />
-        <Route path="batch/:batchId" element={<TrackBatch />} />
+        {/* Batch checks now live on the Verify page; keep old links working. */}
+        <Route path="batch" element={<Navigate to="/verify" replace />} />
+        <Route path="batch/:batchId" element={<ToVerify />} />
         <Route path="approvals" element={<ApprovalQueue />} />
         <Route path="how" element={<HowItWorks />} />
       </Routes>

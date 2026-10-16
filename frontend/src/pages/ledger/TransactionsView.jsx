@@ -7,13 +7,16 @@ import { subscribeActivity } from "../../lib/activity";
 import { getLedger } from "../../lib/ledger";
 
 // Every transaction the contract has ever recorded, newest first, updating live.
-export default function TransactionsView({ batchId: fixedBatch }) {
+export default function TransactionsView({ batchId: fixedBatch, compact = false }) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
   const [live, setLive] = useState(0);
-  const filters = { batchId: fixedBatch || params.get("batch") || "", address: params.get("address") || "", type: params.get("type") || "" };
+  // Compact mode (on the Verify page) shows one batch's transactions and ignores the URL filters.
+  const filters = compact
+    ? { batchId: fixedBatch, address: "", type: "" }
+    : { batchId: fixedBatch || params.get("batch") || "", address: params.get("address") || "", type: params.get("type") || "" };
 
   const load = useCallback(async () => {
     setError("");
@@ -58,7 +61,7 @@ export default function TransactionsView({ batchId: fixedBatch }) {
       header: "Batch / participant",
       render: (r) =>
         r.batchId ? (
-          <a href={`#batch-${r.batchId}`} onClick={(e) => { e.preventDefault(); navigate(`/ledger/batch/${encodeURIComponent(r.batchId)}`); }}>
+          <a href={`#batch-${r.batchId}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/verify/${encodeURIComponent(r.batchId)}`); }}>
             {r.batchId}
           </a>
         ) : (
@@ -71,11 +74,11 @@ export default function TransactionsView({ batchId: fixedBatch }) {
 
   return (
     <Card
-      title="All transactions"
-      subtitle="Every entry is a signed blockchain transaction. Click a row for the full receipt."
+      title={compact ? "On-chain transactions" : "All transactions"}
+      subtitle={compact ? "Every signed transaction for this batch, newest first. Click a row for the full receipt." : "Every entry is a signed blockchain transaction. Click a row for the full receipt."}
       actions={<Badge tone="green">● Live</Badge>}
     >
-      <div className="ledger-filters">
+      {!compact && (<div className="ledger-filters">
         <Input label="Batch ID" value={filters.batchId} onChange={(e) => setFilter("batch", e.target.value)} placeholder="e.g. PCM-2026-001" />
         <Input label="Wallet address" value={filters.address} onChange={(e) => setFilter("address", e.target.value)} placeholder="0x…" />
         <Select
@@ -87,17 +90,17 @@ export default function TransactionsView({ batchId: fixedBatch }) {
         <Button variant="secondary" onClick={() => setParams({}, { replace: true })}>
           Clear
         </Button>
-      </div>
+      </div>)}
       {error && <Alert type="error" title="Couldn't read the ledger">{error}</Alert>}
       {rows === null ? (
         <Spinner label="Reading the chain…" />
       ) : (
         <Table
-          columns={columns}
+          columns={compact ? columns.filter((c) => c.key !== "subject") : columns}
           rows={rows}
           rowKey={(r) => `${r.txHash}-${r.logIndex}`}
           onRowClick={(r) => navigate(`/ledger/tx/${r.txHash}`)}
-          empty="No transactions match these filters."
+          empty={compact ? "No transactions for this batch yet." : "No transactions match these filters."}
         />
       )}
     </Card>
