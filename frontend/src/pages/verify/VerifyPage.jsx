@@ -81,11 +81,21 @@ export default function VerifyPage() {
 
   // The URL is the source of truth: searching navigates, and this effect loads.
   // That way a scanned QR link and a typed ID behave exactly the same.
+  // Bumped when something changes on-chain from this tab (e.g. the assistant sent this batch),
+  // so the page re-reads the batch even though the URL stayed the same.
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const bump = () => setVersion((v) => v + 1);
+    window.addEventListener("medichain:changed", bump);
+    return () => window.removeEventListener("medichain:changed", bump);
+  }, []);
+
   useEffect(() => {
     if (!batchId) return;
     setInput(batchId);
     let cancelled = false;
-    setState({ loading: true, error: "", result: null });
+    // A refresh of the same batch keeps the old result on screen until the new one arrives.
+    setState((s) => (version > 0 && s.result ? { ...s, loading: true } : { loading: true, error: "", result: null }));
     loadBatch(batchId)
       .then((result) => !cancelled && setState({ loading: false, error: "", result }))
       .catch((err) => {
@@ -96,7 +106,7 @@ export default function VerifyPage() {
     return () => {
       cancelled = true;
     };
-  }, [batchId]);
+  }, [batchId, version]);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -167,7 +177,7 @@ export default function VerifyPage() {
                 Recomputed in your browser from raw blockchain data: the record, every handover's 3 signatures,
                 and the lab report fingerprint.
               </p>
-              <ThreeStepVerification key={batchId} batchId={batchId} />
+              <ThreeStepVerification key={`${batchId}-${version}`} batchId={batchId} />
             </section>
           )}
 
@@ -194,7 +204,7 @@ export default function VerifyPage() {
 
           {result.details && (
             <div className="verify-tx">
-              <TransactionsView key={batchId} batchId={batchId} compact />
+              <TransactionsView key={`${batchId}-${version}`} batchId={batchId} compact />
             </div>
           )}
         </>
