@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Badge, Button, Card, Input, Select, Spinner, Table } from "../../components/ui";
+import BatchLink from "../../components/ledger/BatchLink.jsx";
 import HashLink from "../../components/ledger/HashLink.jsx";
 import { EVENT_TONE, EVENT_TYPES, dateTime, timeAgo } from "../../components/ledger/format";
 import { subscribeActivity } from "../../lib/activity";
 import { getLedger } from "../../lib/ledger";
+import { formatDate } from "../dashboard/format";
 
 // Every transaction the contract has ever recorded, newest first, updating live.
 export default function TransactionsView({ batchId: fixedBatch, compact = false }) {
@@ -61,11 +63,23 @@ export default function TransactionsView({ batchId: fixedBatch, compact = false 
       header: "Batch / participant",
       render: (r) =>
         r.batchId ? (
-          <a href={`#batch-${r.batchId}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/verify/${encodeURIComponent(r.batchId)}`); }}>
-            {r.batchId}
-          </a>
+          <BatchLink id={r.batchId} />
         ) : (
           r.name || <HashLink kind="address" value={r.account} />
+        ),
+    },
+    {
+      key: "expiry",
+      header: "Expiry date",
+      render: (r) =>
+        r.expiryDate ? (
+          r.expiryDate * 1000 < Date.now() ? (
+            <Badge tone="red">Expired {formatDate(r.expiryDate)}</Badge>
+          ) : (
+            formatDate(r.expiryDate)
+          )
+        ) : (
+          <span className="muted">—</span>
         ),
     },
     { key: "signer", header: "Signed by", render: (r) => <HashLink kind="address" value={r.signer} /> },
