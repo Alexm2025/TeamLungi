@@ -1,8 +1,11 @@
 # MediChain – Medicine Batch Tracking on Blockchain
 
+[![First Runner-Up: HACK ON TRACK 2026](https://img.shields.io/badge/%F0%9F%8F%86%20First%20Runner--Up-HACK%20ON%20TRACK%202026-silver?style=for-the-badge)](#)
+[![Live demo](https://img.shields.io/badge/Live%20demo-Sepolia-blue?style=for-the-badge)](https://alexm2025.github.io/TeamLungi/)
+
 A blockchain platform that tracks medicine batches from manufacturers through distributors to pharmacies, so anyone can verify a batch's origin and full custody history.
 
-> 🚧 Work in progress – built during a 24-hour hackathon.
+> 🏆 **First Runner-Up at HACK ON TRACK 2026**, a 24-hour national hackathon at FCRIT Vashi (Oct 2026). Built by Team Lungi: [Alex Mathew](https://github.com/Alexm2025) (team lead), [Erwin Samuel](https://github.com/ErwinSamuel2906) and [Shreya Shetty](https://github.com/shreashetty17).
 
 ## The problem
 
