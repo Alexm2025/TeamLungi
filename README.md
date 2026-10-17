@@ -5,7 +5,7 @@
 
 A blockchain platform that tracks medicine batches from manufacturers through distributors to pharmacies, so anyone can verify a batch's origin and full custody history.
 
-> 🏆 **First Runner-Up at HACK ON TRACK 2026**, a 24-hour national hackathon at FCRIT Vashi (Oct 2026). Built by Team Lungi: [Alex Mathew](https://github.com/Alexm2025) (team lead), [Erwin Samuel](https://github.com/ErwinSamuel2906) and [Shreya Shetty](https://github.com/shreashetty17).
+> 🏆 **First Runner-Up at HACK ON TRACK 2026**, a 24-hour national hackathon at FCRIT Vashi (Oct 2026). Built by Team Lungi: [Alex Mathew](https://github.com/Alexm2025) (Team Leader), [Erwin Samuel](https://github.com/ErwinSamuel2906) and [Shreya Shetty](https://github.com/shreashetty17).
 
 ## The problem
 
